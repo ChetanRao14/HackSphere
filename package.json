@@ -1,0 +1,17 @@
+{
+  "name": "hacksphere",
+  "version": "1.0.0",
+  "description": "HackSphere is a full-stack MERN (MongoDB, Express, React, Node.js) application for hackathon registration and management. It allows participants to register teams and submit abstracts, while judges can review, accept, or reject submissions.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "install-all": "concurrently \"npm install --prefix server\" \"npm install --prefix client\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
