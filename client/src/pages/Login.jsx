@@ -54,7 +54,7 @@ const Login = () => {
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/login`, { email, password, role });
       login(res.data.user, res.data.token);
-      navigate(`/${res.data.user.role}`);
+      navigate(`/${res.data.user.role}`, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
     } finally {

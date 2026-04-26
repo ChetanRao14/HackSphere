@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: HackSphere Express API SAM Template
+
+Parameters:
+  MongoUri:
+    Type: String
+    Description: MongoDB Connection URI
+  JwtSecret:
+    Type: String
+    Description: Secret key for JWT
+  AdminCode:
+    Type: String
+    Description: Organization Admin Access Code
+    Default: HACKSPHERE_ADMIN_2026
+
+Resources:
+  HackSphereApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: lambda.handler
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Events:
+        ProxyApiRoot:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+        ProxyApiGreedy:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+      Environment:
+        Variables:
+          MONGO_URI: !Ref MongoUri
+          JWT_SECRET: !Ref JwtSecret
+          ADMIN_CODE: !Ref AdminCode
+          NODE_ENV: production
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

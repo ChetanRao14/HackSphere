@@ -5,7 +5,7 @@ const Hackathon = require('../models/Hackathon');
 // Public: get all upcoming hackathons
 router.get('/', async (req, res) => {
   try {
-    const hackathons = await Hackathon.find({ status: { $in: ['upcoming', 'active'] } })
+    const hackathons = await Hackathon.find({ eventEndDate: { $gt: Date.now() } })
       .sort({ eventStartDate: 1 });
     res.json(hackathons);
   } catch (err) {

@@ -5,10 +5,11 @@ import { AuthContext } from '../context/AuthContext';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const statusColors = {
-  upcoming:  { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', label: '🔵 Upcoming' },
-  active:    { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', label: '🟢 Active' },
-  closed:    { bg: '#fefce8', color: '#a16207', border: '#fef08a', label: '🟡 Closed' },
-  completed: { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0', label: '⚫ Completed' },
+  announcement: { bg: '#fefce8', color: '#a16207', border: '#fef08a', label: '🔜 Announcement' },
+  upcoming:     { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', label: '🔵 Open' },
+  active:       { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', label: '🟢 Active' },
+  closed:       { bg: '#fff7ed', color: '#c2410c', border: '#ffedd5', label: '🟡 Closed' },
+  completed:    { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0', label: '⚫ Completed' },
 };
 
 const StatusBadge = ({ status }) => {
@@ -26,7 +27,7 @@ const StatCard = ({ icon, label, value, color }) => (
   </div>
 );
 
-const defaultForm = { title: '', description: '', location: '', mode: 'in-person', registrationDeadline: '', eventStartDate: '', eventEndDate: '', maxTeams: 50, prizePool: '', status: 'upcoming', tags: '' };
+const defaultForm = { title: '', description: '', location: '', mode: 'in-person', registrationStartDate: '', registrationDeadline: '', eventStartDate: '', eventEndDate: '', maxTeams: 50, prizePool: '', tags: '' };
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -57,12 +58,21 @@ const AdminDashboard = () => {
 
   const openNew = () => { setForm(defaultForm); setEditTarget(null); setError(''); setView('new'); };
   const openEdit = (h) => {
+    // Convert UTC dates back to local input format
+    const localDateTime = (utcDateStr) => {
+      if (!utcDateStr) return '';
+      const d = new Date(utcDateStr);
+      const pad = (n) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
     setEditTarget(h);
     setForm({
       ...h,
-      registrationDeadline: h.registrationDeadline ? new Date(h.registrationDeadline).toISOString().slice(0, 16) : '',
-      eventStartDate: h.eventStartDate ? new Date(h.eventStartDate).toISOString().slice(0, 16) : '',
-      eventEndDate: h.eventEndDate ? new Date(h.eventEndDate).toISOString().slice(0, 16) : '',
+      registrationStartDate: localDateTime(h.registrationStartDate),
+      registrationDeadline: localDateTime(h.registrationDeadline),
+      eventStartDate: localDateTime(h.eventStartDate),
+      eventEndDate: localDateTime(h.eventEndDate),
       tags: Array.isArray(h.tags) ? h.tags.join(', ') : ''
     });
     setError('');
@@ -72,14 +82,15 @@ const AdminDashboard = () => {
   // ── Client-side date validation ──────────────────────────────────────────
   const validateFormDates = () => {
     const today = new Date();
-    const reg   = form.registrationDeadline ? new Date(form.registrationDeadline) : null;
-    const start = form.eventStartDate       ? new Date(form.eventStartDate)       : null;
-    const end   = form.eventEndDate         ? new Date(form.eventEndDate)         : null;
+    const regS   = form.registrationStartDate ? new Date(form.registrationStartDate) : null;
+    const regD   = form.registrationDeadline  ? new Date(form.registrationDeadline)  : null;
+    const start  = form.eventStartDate        ? new Date(form.eventStartDate)        : null;
+    const end    = form.eventEndDate          ? new Date(form.eventEndDate)          : null;
 
-    if (!reg || !start || !end) return 'Please fill in all three date fields.';
-    if (reg < today)   return 'Registration deadline cannot be in the past.';
-    if (reg >= start)  return 'Registration deadline must be before the event start date.';
-    if (start >= end)  return 'Event start date must be before the event end date.';
+    if (!regS || !regD || !start || !end) return 'Please fill in all four date/time fields.';
+    if (regS >= regD)  return 'Registration must start before it ends.';
+    if (regD >= start) return 'Registration must end before the event begins.';
+    if (start >= end)  return 'Event must start before it ends.';
     return null;
   };
 
@@ -139,87 +150,88 @@ const AdminDashboard = () => {
   );
 
   return (
-    <div style={{ display: 'flex', gap: '28px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Inter', sans-serif" }}>
-      {/* Sidebar */}
-      <div style={{ width: '220px', flexShrink: 0 }}>
-        <div style={{ background: 'white', borderRadius: '16px', padding: '8px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-          <div style={{ padding: '16px 12px 12px' }}>
-            <p style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Admin Panel</p>
-          </div>
-          {sideItems.map(item => (
-            <button key={item.key} onClick={() => setView(item.key)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: view === item.key ? '700' : '500', transition: 'all 0.15s',
-                background: view === item.key ? '#eef2ff' : 'transparent',
-                color: view === item.key ? '#6366f1' : '#64748b',
-              }}
-            ><span>{item.icon}</span>{item.label}</button>
-          ))}
-          <div style={{ height: '1px', background: '#f1f5f9', margin: '8px 0' }} />
-          <button onClick={openNew}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: '600', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}
-          ><span>➕</span> New Hackathon</button>
-        </div>
+    <div style={{ width: '100%', margin: '0 auto', fontFamily: "'Inter', sans-serif" }}>
+      
+      {/* ── GLOBAL WELCOME ── */}
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Welcome back, {user?.name} 👋</h1>
+        <p style={{ color: '#64748b', margin: 0 }}>Here's your administrative command center.</p>
       </div>
 
-      {/* Main */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* ── HORIZONTAL ADMIN PANEL ── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', background: 'white', borderRadius: '16px', padding: '16px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '32px' }}>
+        <p style={{ fontSize: '12px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 12px 0 0' }}>Admin Panel</p>
+        
+        {sideItems.map(item => (
+          <button key={item.key} onClick={() => setView(item.key)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: view === item.key ? '700' : '600', transition: 'all 0.15s', background: view === item.key ? '#eef2ff' : 'transparent', color: view === item.key ? '#6366f1' : '#64748b' }}
+          ><span>{item.icon}</span>{item.label}</button>
+        ))}
+
+        <div style={{ width: '1px', height: '24px', background: '#e2e8f0', margin: '0 4px' }} />
+
+        <button onClick={openNew}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: '700', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}
+        ><span>➕</span> New Hackathon</button>
+      </div>
+
+      {/* ── MAIN CONTENT ── */}
+      <div style={{ width: '100%' }}>
         {success && <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', padding: '12px 16px', borderRadius: '10px', marginBottom: '20px', fontWeight: '600', fontSize: '14px' }}>✅ {success}</div>}
         {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px 16px', borderRadius: '10px', marginBottom: '20px', fontWeight: '600', fontSize: '14px' }}>❌ {error}</div>}
 
         {/* ── OVERVIEW ── */}
         {view === 'dashboard' && stats && (
-          <div>
-            <div style={{ marginBottom: '28px' }}>
-              <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Welcome back, {user?.name} 👋</h1>
-              <p style={{ color: '#64748b', margin: 0 }}>Here's what's happening on HackSphere today.</p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+          <div style={{ display: 'grid', gap: '32px' }}>
+            {/* Stats Row - 5 even columns for a balanced fit */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px' }}>
               <StatCard icon="🏆" label="Hackathons" value={stats.totalHackathons} color="#eef2ff" />
               <StatCard icon="👥" label="Total Teams" value={stats.totalTeams} color="#f0fdf4" />
-              <StatCard icon="👤" label="Users" value={stats.totalUsers} color="#fffbeb" />
-              <StatCard icon="⏳" label="Pending" value={stats.pendingTeams} color="#fef2f2" />
+              <StatCard icon="🎓" label="Participants" value={stats.totalParticipants} color="#fffbeb" />
+              <StatCard icon="⚖️" label="Judges" value={stats.totalJudges} color="#ecfeff" />
+              <StatCard icon="👑" label="Admins" value={stats.totalAdmins} color="#fef2f2" />
             </div>
 
-            {/* Status breakdown */}
-            <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', marginBottom: '28px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 20px' }}>Submissions by Status</h3>
-              {stats.statusBreakdown.length === 0 ? (
-                <p style={{ color: '#94a3b8', margin: 0 }}>No submissions yet.</p>
-              ) : stats.statusBreakdown.map(s => {
-                const colors = { pending: '#f59e0b', accepted: '#22c55e', rejected: '#ef4444' };
-                const total = stats.totalTeams || 1;
-                const pct = Math.round((s.count / total) * 100);
-                return (
-                  <div key={s._id} style={{ marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151', textTransform: 'capitalize' }}>{s._id}</span>
-                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{s.count} <span style={{ color: '#94a3b8', fontWeight: '500' }}>({pct}%)</span></span>
-                    </div>
-                    <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '100px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: colors[s._id] || '#6366f1', borderRadius: '100px', transition: 'width 0.4s' }} />
-                    </div>
+            {/* Dashboard Content Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+              {/* Recent Activity Card */}
+              <div style={{ background: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 }}>Recent Hackathons</h3>
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>Quick access to your latest scheduled events</p>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Recent hackathons */}
-            <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0 }}>Recent Hackathons</h3>
                 <button onClick={() => setView('hackathons')} style={{ background: 'none', border: 'none', color: '#6366f1', fontWeight: '600', fontSize: '14px', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View all →</button>
               </div>
-              {hackathons.slice(0, 3).map(h => (
-                <div key={h._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', borderRadius: '10px', background: '#f8fafc', marginBottom: '10px' }}>
-                  <div>
-                    <p style={{ fontWeight: '700', color: '#0f172a', margin: '0 0 3px', fontSize: '14px' }}>{h.title}</p>
-                    <p style={{ color: '#94a3b8', margin: 0, fontSize: '12px', fontWeight: '500' }}>📍 {h.location} · 📅 {new Date(h.eventStartDate).toLocaleDateString()}</p>
-                  </div>
-                  <StatusBadge status={h.status} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {hackathons.slice(0, 4).map(h => (
+                    <div key={h._id} 
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderRadius: '14px', background: '#f8fafc', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'all 0.2s' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                      onClick={() => { setEditTarget(h); openEdit(h); }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1px solid #e2e8f0' }}>🏆</div>
+                        <div>
+                          <p style={{ fontWeight: '700', color: '#0f172a', margin: '0 0 2px', fontSize: '15px' }}>{h.title}</p>
+                          <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>
+                            <span>📍 {h.location}</span>
+                            <span>•</span>
+                            <span>📅 {new Date(h.eventStartDate).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <StatusBadge status={h.status} />
+                    </div>
+                  ))}
+                  {hackathons.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                      <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>No hackathons scheduled yet. <button onClick={openNew} style={{ background: 'none', border: 'none', color: '#6366f1', fontWeight: '700', cursor: 'pointer', padding: 0, fontFamily: 'Inter, sans-serif' }}>Create one →</button></p>
+                    </div>
+                  )}
                 </div>
-              ))}
-              {hackathons.length === 0 && <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px' }}>No hackathons scheduled yet. <button onClick={openNew} style={{ background: 'none', border: 'none', color: '#6366f1', fontWeight: '700', cursor: 'pointer', padding: 0, fontFamily: 'Inter, sans-serif' }}>Create one →</button></p>}
+              </div>
             </div>
           </div>
         )}
@@ -267,7 +279,8 @@ const AdminDashboard = () => {
                           {[
                             { icon: '📍', label: h.location },
                             { icon: '📅', label: `${new Date(h.eventStartDate).toLocaleString()} → ${new Date(h.eventEndDate).toLocaleString()}` },
-                            { icon: '⏰', label: `Register by ${new Date(h.registrationDeadline).toLocaleString()}` },
+                            { icon: '📝', label: `Reg Open: ${new Date(h.registrationStartDate).toLocaleString()}` },
+                            { icon: '⏰', label: `Reg Close: ${new Date(h.registrationDeadline).toLocaleString()}` },
                             { icon: '👥', label: `Max ${h.maxTeams} teams` },
                             h.prizePool ? { icon: '🏅', label: h.prizePool } : null,
                           ].filter(Boolean).map((info, i) => (
@@ -345,44 +358,77 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Dates — with validation hints */}
+                {/* Dates — Phase based layout */}
                 {(() => {
                   const today = new Date().toISOString().slice(0, 16);
+                  const regS   = form.registrationStartDate;
                   const regD   = form.registrationDeadline;
                   const startD = form.eventStartDate;
                   const endD   = form.eventEndDate;
 
-                  const regErr   = regD   && regD < today                    ? '⚠️ Must be in the future'     : regD && startD && regD >= startD ? '⚠️ Must be before event start' : null;
-                  const startErr = startD && regD  && startD <= regD          ? '⚠️ Must be after deadline'      : startD && endD && startD >= endD  ? '⚠️ Must be before end date'   : null;
-                  const endErr   = endD   && startD && endD   <= startD       ? '⚠️ Must be after start date'    : null;
+                  const regSErr  = regS && regD && regS >= regD ? '⚠️ Must start before deadline' : null;
+                  const regDErr  = regD && startD && regD >= startD ? '⚠️ Must end before event start' : null;
+                  const startErr = startD && endD && startD >= endD ? '⚠️ Must start before end' : null;
 
                   const fieldBorder = (err) => ({ ...inputStyle, borderColor: err ? '#ef4444' : '#e2e8f0', boxShadow: err ? '0 0 0 3px rgba(239,68,68,0.1)' : 'none' });
-                  const hintStyle   = { fontSize: '12px', marginTop: '5px', fontWeight: '600', color: '#ef4444' };
-                  const okStyle     = { fontSize: '12px', marginTop: '5px', fontWeight: '500', color: '#94a3b8' };
+                  const hintStyle   = { fontSize: '11px', marginTop: '4px', fontWeight: '600', color: '#ef4444' };
+                  const okStyle     = { fontSize: '11px', marginTop: '4px', fontWeight: '500', color: '#94a3b8' };
+
+                  const handleDatePart = (field, currentVal, type, val) => {
+                    const cDate = currentVal ? currentVal.split('T')[0] : '';
+                    const cTime = currentVal && currentVal.includes('T') ? currentVal.split('T')[1] : '00:00';
+                    if (type === 'date') setForm({ ...form, [field]: val ? `${val}T${cTime}` : '' });
+                    if (type === 'time') setForm({ ...form, [field]: cDate ? `${cDate}T${val}` : '' });
+                  };
+
+                  const DateSplitField = ({ label, field, val, err, okMsg }) => (
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ flex: 1.2 }}>
+                          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>📅 Date</p>
+                          <input required type="date" value={val ? val.split('T')[0] : ''} onChange={e => handleDatePart(field, val, 'date', e.target.value)} style={fieldBorder(err)} onFocus={focusIn} onBlur={focusOut} />
+                        </div>
+                        <div style={{ flex: 0.8 }}>
+                          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>⏰ Time</p>
+                          <input required type="time" value={val && val.includes('T') ? val.split('T')[1] : ''} onChange={e => handleDatePart(field, val, 'time', e.target.value)} style={fieldBorder(err)} onFocus={focusIn} onBlur={focusOut} />
+                        </div>
+                      </div>
+                      {err ? <p style={hintStyle}>{err}</p> : <p style={okStyle}>{okMsg}</p>}
+                    </div>
+                  );
 
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Registration Deadline *</label>
-                        <input required type="datetime-local" min={today} value={regD} onChange={e => setForm({ ...form, registrationDeadline: e.target.value })} style={fieldBorder(regErr)} onFocus={focusIn} onBlur={focusOut} />
-                        {regErr ? <p style={hintStyle}>{regErr}</p> : <p style={okStyle}>Must be before event start</p>}
+                    <div style={{ display: 'grid', gap: '24px' }}>
+                      {/* Registration Phase */}
+                      <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
+                        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '18px' }}>📝</span>
+                          <span style={{ fontSize: '14px', fontWeight: '700', color: '#475569' }}>Registration Phase</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '24px' }}>
+                          <DateSplitField label="Open For Applications" field="registrationStartDate" val={regS} err={regSErr} okMsg="When users can start joining" />
+                          <DateSplitField label="Application Deadline" field="registrationDeadline" val={regD} err={regDErr} okMsg="When registrations lock" />
+                        </div>
                       </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Event Start Time *</label>
-                        <input required type="datetime-local" min={regD || today} value={startD} onChange={e => setForm({ ...form, eventStartDate: e.target.value })} style={fieldBorder(startErr)} onFocus={focusIn} onBlur={focusOut} />
-                        {startErr ? <p style={hintStyle}>{startErr}</p> : <p style={okStyle}>Must be after deadline</p>}
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Event End Time *</label>
-                        <input required type="datetime-local" min={startD || regD || today} value={endD} onChange={e => setForm({ ...form, eventEndDate: e.target.value })} style={fieldBorder(endErr)} onFocus={focusIn} onBlur={focusOut} />
-                        {endErr ? <p style={hintStyle}>{endErr}</p> : <p style={okStyle}>Must be after start date</p>}
+
+                      {/* Event Phase */}
+                      <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
+                        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '18px' }}>🚀</span>
+                          <span style={{ fontSize: '14px', fontWeight: '700', color: '#475569' }}>Event Phase</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '24px' }}>
+                          <DateSplitField label="Hackathon Kick-off" field="eventStartDate" val={startD} err={null} okMsg="When hacking begins" />
+                          <DateSplitField label="Final Submission" field="eventEndDate" val={endD} err={startErr} okMsg="When the event ends" />
+                        </div>
                       </div>
                     </div>
                   );
                 })()}
 
                 {/* Max Teams + Prize + Status */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Max Teams</label>
                     <input type="number" min="1" max="1000" value={form.maxTeams} onChange={e => setForm({ ...form, maxTeams: e.target.value })} style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
@@ -390,15 +436,6 @@ const AdminDashboard = () => {
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prize Pool</label>
                     <input value={form.prizePool} onChange={e => setForm({ ...form, prizePool: e.target.value })} placeholder="e.g. $10,000 in prizes" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</label>
-                    <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={inputStyle} onFocus={focusIn} onBlur={focusOut}>
-                      <option value="upcoming">🔵 Upcoming</option>
-                      <option value="active">🟢 Active</option>
-                      <option value="closed">🟡 Closed</option>
-                      <option value="completed">⚫ Completed</option>
-                    </select>
                   </div>
                 </div>
 

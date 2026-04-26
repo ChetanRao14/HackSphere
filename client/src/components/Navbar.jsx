@@ -17,20 +17,23 @@ const Navbar = () => {
   return (
     <nav style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 100, fontFamily: "'Inter', sans-serif", boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(99,102,241,0.35)' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
-            </svg>
+        {/* Left Side: Logo + Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(99,102,241,0.35)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+              </svg>
+            </div>
+            <span style={{ fontWeight: '800', fontSize: '20px', color: '#0f172a', letterSpacing: '-0.5px' }}>HackSphere</span>
           </div>
-          <span style={{ fontWeight: '800', fontSize: '20px', color: '#0f172a', letterSpacing: '-0.5px' }}>HackSphere</span>
-        </div>
 
-        {/* Season badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '6px 14px', borderRadius: '100px' }}>
-          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e' }} />
-          <span style={{ color: '#15803d', fontSize: '12px', fontWeight: '700' }}>Hackathon Season 2026</span>
+          {/* Season badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '6px 14px', borderRadius: '100px' }}>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e' }} />
+            <span style={{ color: '#15803d', fontSize: '12px', fontWeight: '700' }}>Hackathon Season 2026</span>
+          </div>
         </div>
 
         {/* User + Logout */}

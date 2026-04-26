@@ -35,8 +35,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Navigate to={user ? `/${user.role}` : "/login"} replace />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={user ? <Navigate to={`/${user.role}`} replace /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to={`/${user.role}`} replace /> : <Register />} />
 
       <Route element={<Layout />}>
         <Route path="/participant" element={

@@ -19,6 +19,10 @@ const hackathonSchema = new mongoose.Schema({
     enum: ['in-person', 'online', 'hybrid'],
     default: 'in-person'
   },
+  registrationStartDate: {
+    type: Date,
+    required: true
+  },
   registrationDeadline: {
     type: Date,
     required: true
@@ -39,11 +43,6 @@ const hackathonSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  status: {
-    type: String,
-    enum: ['upcoming', 'active', 'closed', 'completed'],
-    default: 'upcoming'
-  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -52,7 +51,26 @@ const hackathonSchema = new mongoose.Schema({
   tags: {
     type: [String],
     default: []
-  }
-}, { timestamps: true });
+  },
+  judges: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// ── Automated Status Logic ───────────────────────────────────────────
+hackathonSchema.virtual('status').get(function() {
+  const now = new Date();
+  
+  if (now < this.registrationStartDate) return 'announcement';
+  if (now < this.registrationDeadline)  return 'upcoming'; // Mapping 'open' to 'upcoming' for existing UI compatibility
+  if (now < this.eventStartDate)         return 'closed';
+  if (now < this.eventEndDate)           return 'active';
+  return 'completed';
+});
 
 module.exports = mongoose.model('Hackathon', hackathonSchema);

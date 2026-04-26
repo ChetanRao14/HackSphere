@@ -23,9 +23,11 @@ const teamSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    unique: true
+    required: true
   }
 }, { timestamps: true });
+
+// Compound index: A user can only register once per specific hackathon
+teamSchema.index({ createdBy: 1, hackathon: 1 }, { unique: true });
 
 module.exports = mongoose.model('Team', teamSchema);

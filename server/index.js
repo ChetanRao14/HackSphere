@@ -24,13 +24,34 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
+const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) return;
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB');
+    
+    // Drop old unique index for createdBy safely
+    try {
+      if (mongoose.connection.db) {
+        await mongoose.connection.collection('teams').dropIndex('createdBy_1');
+        console.log('Dropped old createdBy_1 index');
+      }
+    } catch (e) {
+      // Ignore if index doesn't exist
+    }
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+  }
+};
+
+// If running locally, listen on port
+if (require.main === module || process.env.NODE_ENV === 'development') {
+  connectDB().then(() => {
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
   });
+}
+
+// Export the app for serverless and the db connector functions
+module.exports = { app, connectDB };

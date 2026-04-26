@@ -3,17 +3,19 @@ const Team = require('../models/Team');
 const User = require('../models/User');
 
 // ── Shared date validation helper ──────────────────────────────────────────
-const validateDates = (registrationDeadline, eventStartDate, eventEndDate) => {
+const validateDates = (registrationStartDate, registrationDeadline, eventStartDate, eventEndDate) => {
   const now = new Date();
+  const regS  = new Date(registrationStartDate);
   const regD  = new Date(registrationDeadline);
   const start = new Date(eventStartDate);
   const end   = new Date(eventEndDate);
 
-  if (isNaN(regD) || isNaN(start) || isNaN(end)) {
+  if (isNaN(regS) || isNaN(regD) || isNaN(start) || isNaN(end)) {
     return 'One or more dates are invalid.';
   }
-  if (regD < now) {
-    return 'Registration deadline must be today or a future date.';
+  // Registration start can be now or future, but let's just ensure order for simplicity
+  if (regS >= regD) {
+    return 'Registration start must be before the deadline.';
   }
   if (regD >= start) {
     return 'Registration deadline must be before the event start date.';
@@ -46,12 +48,13 @@ const createHackathon = async (req, res) => {
   try {
     const {
       title, description, location, mode,
-      registrationDeadline, eventStartDate, eventEndDate,
+      registrationStartDate, registrationDeadline, 
+      eventStartDate, eventEndDate,
       maxTeams, prizePool, tags
     } = req.body;
 
     // 1. Date logic validation
-    const dateError = validateDates(registrationDeadline, eventStartDate, eventEndDate);
+    const dateError = validateDates(registrationStartDate, registrationDeadline, eventStartDate, eventEndDate);
     if (dateError) return res.status(400).json({ message: dateError });
 
     // 2. Collision detection
@@ -66,7 +69,8 @@ const createHackathon = async (req, res) => {
 
     const hackathon = new Hackathon({
       title, description, location, mode,
-      registrationDeadline, eventStartDate, eventEndDate,
+      registrationStartDate, registrationDeadline, 
+      eventStartDate, eventEndDate,
       maxTeams, prizePool, tags,
       createdBy: req.user.id
     });
@@ -95,10 +99,10 @@ const getHackathons = async (req, res) => {
 // Update a hackathon
 const updateHackathon = async (req, res) => {
   try {
-    const { registrationDeadline, eventStartDate, eventEndDate } = req.body;
+    const { registrationStartDate, registrationDeadline, eventStartDate, eventEndDate } = req.body;
 
     // 1. Date logic validation
-    const dateError = validateDates(registrationDeadline, eventStartDate, eventEndDate);
+    const dateError = validateDates(registrationStartDate, registrationDeadline, eventStartDate, eventEndDate);
     if (dateError) return res.status(400).json({ message: dateError });
 
     // 2. Collision detection (exclude this hackathon itself)
@@ -139,18 +143,20 @@ const deleteHackathon = async (req, res) => {
 // Get dashboard stats
 const getStats = async (req, res) => {
   try {
-    const [totalTeams, totalUsers, totalHackathons, pendingTeams] = await Promise.all([
+    const [totalTeams, totalParticipants, totalJudges, totalAdmins, totalHackathons, pendingTeams] = await Promise.all([
       Team.countDocuments(),
-      User.countDocuments(),
+      User.countDocuments({ role: 'participant' }),
+      User.countDocuments({ role: 'judge' }),
+      User.countDocuments({ role: 'admin' }),
       Hackathon.countDocuments(),
-      Team.countDocuments({ status: 'pending' })
+      Team.countDocuments({ status: 'waitlisted' })
     ]);
 
     const statusBreakdown = await Team.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
-    res.json({ totalTeams, totalUsers, totalHackathons, pendingTeams, statusBreakdown });
+    res.json({ totalTeams, totalParticipants, totalJudges, totalAdmins, totalHackathons, pendingTeams, statusBreakdown });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to fetch stats' });
