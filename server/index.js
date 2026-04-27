@@ -45,13 +45,11 @@ const connectDB = async () => {
 };
 
 // If running locally, listen on port
-if (require.main === module || process.env.NODE_ENV === 'development') {
-  connectDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+connectDB().then(() => {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
   });
-}
+});
 
 // Export the app for serverless and the db connector functions
 module.exports = { app, connectDB };
