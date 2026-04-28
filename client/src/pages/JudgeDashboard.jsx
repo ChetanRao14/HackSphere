@@ -65,6 +65,27 @@ const TimelineBar = ({ hackathon }) => {
   );
 };
 
+// Shared input style for EditTimingsModal
+const timingsInputStyle = { width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontFamily: 'Inter, sans-serif', outline: 'none', background: 'white', color: '#1e293b', boxSizing: 'border-box', transition: 'all 0.2s' };
+
+// Defined at module level so React never remounts it on re-render (prevents focus loss)
+const SplitField = ({ label, field, val, onDateChange, onTimeChange }) => (
+  <div>
+    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
+    <div style={{ display: 'flex', gap: '8px' }}>
+      <div style={{ flex: 1.2 }}>
+        <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>📅 Date</p>
+        <input required type="date" value={val ? val.split('T')[0] : ''} onChange={e => onDateChange(field, val, e.target.value)} style={timingsInputStyle} />
+      </div>
+      <div style={{ flex: 0.8 }}>
+        <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>⏰ Time</p>
+        <input required type="time" value={val && val.includes('T') ? val.split('T')[1] : ''} onChange={e => onTimeChange(field, val, e.target.value)} style={timingsInputStyle} />
+      </div>
+    </div>
+  </div>
+);
+
+
 const EditTimingsModal = ({ hackathon, onClose, onSuccess }) => {
   const [form, setForm] = useState({
     registrationStartDate: hackathon.registrationStartDate ? new Date(hackathon.registrationStartDate).toISOString().slice(0, 16) : '',
@@ -75,30 +96,16 @@ const EditTimingsModal = ({ hackathon, onClose, onSuccess }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const inputStyle = { width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontFamily: 'Inter, sans-serif', outline: 'none', background: 'white', color: '#1e293b', boxSizing: 'border-box', transition: 'all 0.2s' };
-
-  const handleDatePart = (field, currentVal, type, val) => {
-    const cDate = currentVal ? currentVal.split('T')[0] : '';
+  // Functional setState to avoid stale closure bugs
+  const handleDateChange = (field, currentVal, val) => {
     const cTime = currentVal && currentVal.includes('T') ? currentVal.split('T')[1] : '00:00';
-    if (type === 'date') setForm({ ...form, [field]: val ? `${val}T${cTime}` : '' });
-    if (type === 'time') setForm({ ...form, [field]: cDate ? `${cDate}T${val}` : '' });
+    setForm(prev => ({ ...prev, [field]: val ? `${val}T${cTime}` : '' }));
+  };
+  const handleTimeChange = (field, currentVal, val) => {
+    const cDate = currentVal ? currentVal.split('T')[0] : '';
+    setForm(prev => ({ ...prev, [field]: cDate ? `${cDate}T${val}` : '' }));
   };
 
-  const SplitField = ({ label, field, val }) => (
-    <div>
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <div style={{ flex: 1.2 }}>
-          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>📅 Date</p>
-          <input required type="date" value={val ? val.split('T')[0] : ''} onChange={e => handleDatePart(field, val, 'date', e.target.value)} style={inputStyle} />
-        </div>
-        <div style={{ flex: 0.8 }}>
-          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>⏰ Time</p>
-          <input required type="time" value={val && val.includes('T') ? val.split('T')[1] : ''} onChange={e => handleDatePart(field, val, 'time', e.target.value)} style={inputStyle} />
-        </div>
-      </div>
-    </div>
-  );
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -122,10 +129,10 @@ const EditTimingsModal = ({ hackathon, onClose, onSuccess }) => {
         <form onSubmit={handleSave} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>⚠️ {error}</div>}
           
-          <SplitField label="Registration Start Time" field="registrationStartDate" val={form.registrationStartDate} />
-          <SplitField label="Registration Deadline" field="registrationDeadline" val={form.registrationDeadline} />
-          <SplitField label="Event Start Time" field="eventStartDate" val={form.eventStartDate} />
-          <SplitField label="Event End Time" field="eventEndDate" val={form.eventEndDate} />
+          <SplitField label="Registration Start Time" field="registrationStartDate" val={form.registrationStartDate} onDateChange={handleDateChange} onTimeChange={handleTimeChange} />
+          <SplitField label="Registration Deadline" field="registrationDeadline" val={form.registrationDeadline} onDateChange={handleDateChange} onTimeChange={handleTimeChange} />
+          <SplitField label="Event Start Time" field="eventStartDate" val={form.eventStartDate} onDateChange={handleDateChange} onTimeChange={handleTimeChange} />
+          <SplitField label="Event End Time" field="eventEndDate" val={form.eventEndDate} onDateChange={handleDateChange} onTimeChange={handleTimeChange} />
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
             <button type="submit" disabled={saving} style={{ flex: 1, padding: '12px', background: saving ? '#cbd5e1' : '#0891b2', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'Inter, sans-serif' }}>

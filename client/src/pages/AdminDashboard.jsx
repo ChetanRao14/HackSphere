@@ -29,6 +29,42 @@ const StatCard = ({ icon, label, value, color }) => (
 
 const defaultForm = { title: '', description: '', location: '', mode: 'in-person', registrationStartDate: '', registrationDeadline: '', eventStartDate: '', eventEndDate: '', maxTeams: 50, prizePool: '', tags: '' };
 
+// Shared styles used by AdminDateSplitField (module-level to avoid recreation)
+const adminInputStyle = { width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontFamily: 'Inter, sans-serif', outline: 'none', background: 'white', color: '#1e293b', boxSizing: 'border-box', transition: 'all 0.2s' };
+const adminFocusIn  = (e) => { e.target.style.borderColor = '#6366f1'; e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; };
+const adminFocusOut = (e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; };
+
+// Module-level so React never remounts it on re-render — prevents date input focus loss
+const AdminDateSplitField = ({ label, field, val, err, okMsg, setForm }) => {
+  const fieldBorder = { ...adminInputStyle, borderColor: err ? '#ef4444' : '#e2e8f0', boxShadow: err ? '0 0 0 3px rgba(239,68,68,0.1)' : 'none' };
+  const handleDate = (e) => {
+    const cTime = val && val.includes('T') ? val.split('T')[1] : '00:00';
+    setForm(prev => ({ ...prev, [field]: e.target.value ? `${e.target.value}T${cTime}` : '' }));
+  };
+  const handleTime = (e) => {
+    const cDate = val ? val.split('T')[0] : '';
+    setForm(prev => ({ ...prev, [field]: cDate ? `${cDate}T${e.target.value}` : '' }));
+  };
+  return (
+    <div style={{ flex: 1 }}>
+      <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ flex: 1.2 }}>
+          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>📅 Date</p>
+          <input required type="date" value={val ? val.split('T')[0] : ''} onChange={handleDate} style={fieldBorder} onFocus={adminFocusIn} onBlur={adminFocusOut} />
+        </div>
+        <div style={{ flex: 0.8 }}>
+          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>⏰ Time</p>
+          <input required type="time" value={val && val.includes('T') ? val.split('T')[1] : ''} onChange={handleTime} style={fieldBorder} onFocus={adminFocusIn} onBlur={adminFocusOut} />
+        </div>
+      </div>
+      {err ? <p style={{ fontSize: '11px', marginTop: '4px', fontWeight: '600', color: '#ef4444' }}>{err}</p>
+           : <p style={{ fontSize: '11px', marginTop: '4px', fontWeight: '500', color: '#94a3b8' }}>{okMsg}</p>}
+    </div>
+  );
+};
+
+
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
   const [hackathons, setHackathons] = useState([]);
@@ -209,7 +245,7 @@ const AdminDashboard = () => {
                       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderRadius: '14px', background: '#f8fafc', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'all 0.2s' }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                      onClick={() => { setEditTarget(h); openEdit(h); }}
+                      onClick={() => openEdit(h)}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1px solid #e2e8f0' }}>🏆</div>
@@ -360,44 +396,13 @@ const AdminDashboard = () => {
 
                 {/* Dates — Phase based layout */}
                 {(() => {
-                  const today = new Date().toISOString().slice(0, 16);
                   const regS   = form.registrationStartDate;
                   const regD   = form.registrationDeadline;
                   const startD = form.eventStartDate;
                   const endD   = form.eventEndDate;
-
                   const regSErr  = regS && regD && regS >= regD ? '⚠️ Must start before deadline' : null;
                   const regDErr  = regD && startD && regD >= startD ? '⚠️ Must end before event start' : null;
                   const startErr = startD && endD && startD >= endD ? '⚠️ Must start before end' : null;
-
-                  const fieldBorder = (err) => ({ ...inputStyle, borderColor: err ? '#ef4444' : '#e2e8f0', boxShadow: err ? '0 0 0 3px rgba(239,68,68,0.1)' : 'none' });
-                  const hintStyle   = { fontSize: '11px', marginTop: '4px', fontWeight: '600', color: '#ef4444' };
-                  const okStyle     = { fontSize: '11px', marginTop: '4px', fontWeight: '500', color: '#94a3b8' };
-
-                  const handleDatePart = (field, currentVal, type, val) => {
-                    const cDate = currentVal ? currentVal.split('T')[0] : '';
-                    const cTime = currentVal && currentVal.includes('T') ? currentVal.split('T')[1] : '00:00';
-                    if (type === 'date') setForm({ ...form, [field]: val ? `${val}T${cTime}` : '' });
-                    if (type === 'time') setForm({ ...form, [field]: cDate ? `${cDate}T${val}` : '' });
-                  };
-
-                  const DateSplitField = ({ label, field, val, err, okMsg }) => (
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <div style={{ flex: 1.2 }}>
-                          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>📅 Date</p>
-                          <input required type="date" value={val ? val.split('T')[0] : ''} onChange={e => handleDatePart(field, val, 'date', e.target.value)} style={fieldBorder(err)} onFocus={focusIn} onBlur={focusOut} />
-                        </div>
-                        <div style={{ flex: 0.8 }}>
-                          <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '4px', textTransform: 'uppercase' }}>⏰ Time</p>
-                          <input required type="time" value={val && val.includes('T') ? val.split('T')[1] : ''} onChange={e => handleDatePart(field, val, 'time', e.target.value)} style={fieldBorder(err)} onFocus={focusIn} onBlur={focusOut} />
-                        </div>
-                      </div>
-                      {err ? <p style={hintStyle}>{err}</p> : <p style={okStyle}>{okMsg}</p>}
-                    </div>
-                  );
-
                   return (
                     <div style={{ display: 'grid', gap: '24px' }}>
                       {/* Registration Phase */}
@@ -407,11 +412,10 @@ const AdminDashboard = () => {
                           <span style={{ fontSize: '14px', fontWeight: '700', color: '#475569' }}>Registration Phase</span>
                         </div>
                         <div style={{ display: 'flex', gap: '24px' }}>
-                          <DateSplitField label="Open For Applications" field="registrationStartDate" val={regS} err={regSErr} okMsg="When users can start joining" />
-                          <DateSplitField label="Application Deadline" field="registrationDeadline" val={regD} err={regDErr} okMsg="When registrations lock" />
+                          <AdminDateSplitField label="Open For Applications" field="registrationStartDate" val={regS} err={regSErr} okMsg="When users can start joining" setForm={setForm} />
+                          <AdminDateSplitField label="Application Deadline" field="registrationDeadline" val={regD} err={regDErr} okMsg="When registrations lock" setForm={setForm} />
                         </div>
                       </div>
-
                       {/* Event Phase */}
                       <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
                         <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -419,8 +423,8 @@ const AdminDashboard = () => {
                           <span style={{ fontSize: '14px', fontWeight: '700', color: '#475569' }}>Event Phase</span>
                         </div>
                         <div style={{ display: 'flex', gap: '24px' }}>
-                          <DateSplitField label="Hackathon Kick-off" field="eventStartDate" val={startD} err={null} okMsg="When hacking begins" />
-                          <DateSplitField label="Final Submission" field="eventEndDate" val={endD} err={startErr} okMsg="When the event ends" />
+                          <AdminDateSplitField label="Hackathon Kick-off" field="eventStartDate" val={startD} err={null} okMsg="When hacking begins" setForm={setForm} />
+                          <AdminDateSplitField label="Final Submission" field="eventEndDate" val={endD} err={startErr} okMsg="When the event ends" setForm={setForm} />
                         </div>
                       </div>
                     </div>
