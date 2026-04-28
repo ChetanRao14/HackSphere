@@ -57,7 +57,7 @@ const TimelineBar = ({ hackathon }) => {
         <div key={i} style={{ textAlign: 'center', borderRight: i < 3 ? '1px solid #e2e8f0' : 'none', padding: '0 4px' }}>
           <p style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.02em' }}>{d.icon} {d.label}</p>
           <p style={{ fontSize: '11px', fontWeight: '700', color: '#1e293b', margin: 0 }}>
-            {new Date(d.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+            {d.date ? new Date(d.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : 'TBD'}
           </p>
         </div>
       ))}
@@ -277,7 +277,7 @@ export default function JudgeDashboard() {
                         {!canReview(h) ? (
                           <div style={{ textAlign: 'right', padding: '10px 20px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                             <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', fontWeight: '800' }}>LOCKED</p>
-                            <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>Opens {new Date(h.registrationDeadline).toLocaleDateString()}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>Opens after {h.registrationDeadline ? new Date(h.registrationDeadline).toLocaleDateString() : 'N/A'}</p>
                           </div>
                         ) : (
                           <button 

@@ -431,7 +431,7 @@ const AdminDashboard = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Max Teams</label>
-                    <input type="number" min="1" max="1000" value={form.maxTeams} onChange={e => setForm({ ...form, maxTeams: e.target.value })} style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
+                    <input type="number" min="1" max="1000" value={form.maxTeams} onChange={e => setForm({ ...form, maxTeams: parseInt(e.target.value) || 1 })} style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prize Pool</label>

@@ -78,8 +78,10 @@ export default function ParticipantDashboard() {
     </div>
   );
 
-  const registeredHackathonIds = teams.map(t => typeof t.hackathon === 'object' ? t.hackathon?._id : t.hackathon);
-  const availableHackathons = hackathons.filter(h => !registeredHackathonIds.includes(h._id));
+  const registeredHackathonIds = teams.map(t =>
+    typeof t.hackathon === 'object' ? t.hackathon?._id?.toString() : t.hackathon?.toString()
+  );
+  const availableHackathons = hackathons.filter(h => !registeredHackathonIds.includes(h._id.toString()));
 
   // Split registrations into Current vs Past
   const now = new Date();
@@ -97,6 +99,7 @@ export default function ParticipantDashboard() {
     }
   };
 
+  // eslint-disable-next-line react/display-name
   const TimelineBar = ({ hackathon }) => {
     const dates = [
       { label: 'Register', date: hackathon.registrationStartDate, icon: '🚀' },

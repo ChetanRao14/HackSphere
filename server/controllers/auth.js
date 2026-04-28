@@ -8,6 +8,14 @@ const register = async (req, res) => {
   try {
     const { name, email, password, role, adminCode } = req.body;
 
+    // Server-side validation (frontend 'required' can be bypassed via direct API calls)
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'Name is required.' });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+    }
+
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
