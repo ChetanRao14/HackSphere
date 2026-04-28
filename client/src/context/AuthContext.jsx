@@ -8,24 +8,22 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
-  // Setup Axios interceptor to add token to headers
+  // Set axios header + restore user — single effect to avoid race condition
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       localStorage.setItem('token', token);
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        // Token exists but no user data → clear everything
+        setToken(null);
+        localStorage.removeItem('token');
+      }
     } else {
       delete axios.defaults.headers.common['Authorization'];
       localStorage.removeItem('token');
-    }
-  }, [token]);
-
-  // Read user from localStorage on mount (mocking persistence)
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      setToken(null);
     }
     setLoading(false);
   }, [token]);

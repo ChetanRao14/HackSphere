@@ -90,7 +90,7 @@ const Login = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+                <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
               </svg>
             </div>
             <span style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.5px' }}>HackSphere</span>
@@ -103,7 +103,7 @@ const Login = () => {
             🚀 Hackathon Season 2026
           </div>
           <h1 style={{ fontSize: '44px', fontWeight: '900', color: '#0f172a', margin: '0 0 20px', lineHeight: 1.15, letterSpacing: '-1.5px' }}>
-            Build the future.<br/>
+            Build the future.<br />
             <span style={{ background: 'linear-gradient(90deg, #4f46e5, #9333ea, #0284c7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               Win big.
             </span>
@@ -198,13 +198,14 @@ const Login = () => {
             </div>
 
             <button type="submit" disabled={loading}
-              style={{ width: '100%', padding: '15px', borderRadius: '12px', border: 'none', marginTop: '8px',
+              style={{
+                width: '100%', padding: '15px', borderRadius: '12px', border: 'none', marginTop: '8px',
                 background: loading ? '#cbd5e1' : `linear-gradient(135deg, ${selectedRole.color} 0%, #8b5cf6 100%)`,
                 color: 'white', fontSize: '15px', fontWeight: '800', cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
                 boxShadow: loading ? 'none' : `0 4px 15px ${selectedRole.shadow}`,
               }}
-              onMouseEnter={e => { if (!loading) { e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = `0 6px 20px ${selectedRole.shadow}`; }}}
+              onMouseEnter={e => { if (!loading) { e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = `0 6px 20px ${selectedRole.shadow}`; } }}
               onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = `0 4px 15px ${selectedRole.shadow}`; }}
             >
               {loading ? 'Signing in...' : `Sign in as ${selectedRole.label} →`}

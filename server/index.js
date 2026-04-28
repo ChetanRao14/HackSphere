@@ -6,8 +6,21 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  "http://hacksphere-frontend.s3-website.eu-north-1.amazonaws.com",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
 app.use(cors({
-  origin: "http://hacksphere-frontend.s3-website.eu-north-1.amazonaws.com",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin}`));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
