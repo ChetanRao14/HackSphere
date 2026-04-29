@@ -82,9 +82,6 @@ const AdminDashboard = () => {
   const [pSearch, setPSearch] = useState('');
   const [pRole, setPRole] = useState('all');
   const [pHackathonId, setPHackathonId] = useState('');
-  const [pSearch, setPSearch] = useState('');
-  const [pRole, setPRole] = useState('all');
-  const [pHackathonId, setPHackathonId] = useState('');
 
   useEffect(() => { fetchAll(); }, []);
 
