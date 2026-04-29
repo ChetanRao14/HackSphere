@@ -31,9 +31,9 @@ const createTeam = async (req, res) => {
 
     // Count currently accepted teams → determine auto-status
     const acceptedCount = await Team.countDocuments({ hackathon: hackathonId, status: 'accepted' });
-    const totalCount    = await Team.countDocuments({ hackathon: hackathonId });
     const autoStatus    = acceptedCount < hackathon.maxTeams ? 'accepted' : 'waitlisted';
-    const rank          = totalCount + 1;
+    const lastTeam = await Team.findOne({ hackathon: hackathonId }).sort({ registrationRank: -1 });
+    const rank = (lastTeam?.registrationRank || 0) + 1;
 
     const newTeam = new Team({
       teamName, members, abstract,

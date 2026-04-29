@@ -169,9 +169,6 @@ export default function JudgeDashboard() {
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState(null);
   const [editingTimings, setEditingTimings] = useState(false);
-  const [filterCollege, setFilterCollege] = useState('');
-  const [filterCity, setFilterCity] = useState('');
-
   const [pRole, setPRole] = useState('all');
 
   useEffect(() => {
@@ -227,9 +224,7 @@ export default function JudgeDashboard() {
           page, 
           limit: 10, 
           search, 
-          hackathonId: selectedHackathon._id,
-          college: filterCollege,
-          city: filterCity
+          hackathonId: selectedHackathon._id
         } 
       });
       setTeams(r.data.teams); setTotalPages(r.data.totalPages); setTotal(r.data.totalTeams);
@@ -239,7 +234,7 @@ export default function JudgeDashboard() {
 
   useEffect(() => {
     if (selectedHackathon) fetchTeams();
-  }, [page, search, selectedHackathon, filterCollege, filterCity]);
+  }, [page, search, selectedHackathon]);
 
 
   const now = new Date();

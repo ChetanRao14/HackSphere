@@ -17,7 +17,8 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['participant', 'judge', 'admin'],
-    default: 'participant'
+    default: 'participant',
+    index: true
   },
   college: { type: String },
   place: { type: String }

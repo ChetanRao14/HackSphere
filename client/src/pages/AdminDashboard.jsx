@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 
@@ -16,15 +16,61 @@ const StatusBadge = ({ status }) => {
   const s = statusColors[status] || statusColors.upcoming;
   return <span style={{ background: s.bg, color: s.color, border: `1.5px solid ${s.border}`, padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: '700' }}>{s.label}</span>;
 };
-const StatCard = ({ icon, label, value, color }) => (
-  <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '16px' }}>
-    <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>{icon}</div>
-    <div>
+const StatCard = ({ icon, label, value, color, loading }) => (
+  <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '16px', minHeight: '100px' }}>
+    <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: loading ? '#f1f5f9' : color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0, animation: loading ? 'pulse 1.5s infinite' : 'none' }}>{!loading && icon}</div>
+    <div style={{ flex: 1 }}>
       <p style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '600', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-      <p style={{ fontSize: '30px', fontWeight: '800', color: '#0f172a', margin: 0 }}>{value}</p>
+      {loading ? (
+        <div style={{ height: '36px', width: '60%', background: '#f1f5f9', borderRadius: '8px', animation: 'pulse 1.5s infinite' }} />
+      ) : (
+        <p style={{ fontSize: '30px', fontWeight: '800', color: '#0f172a', margin: 0 }}>{value}</p>
+      )}
     </div>
   </div>
 );
+
+const SkeletonRow = () => (
+  <div style={{ background: 'white', borderRadius: '16px', padding: '24px', marginBottom: '14px', border: '1px solid #f1f5f9', animation: 'pulse 1.5s infinite' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+      <div style={{ height: '20px', width: '200px', background: '#f1f5f9', borderRadius: '4px' }} />
+      <div style={{ height: '20px', width: '80px', background: '#f1f5f9', borderRadius: '100px' }} />
+    </div>
+    <div style={{ height: '14px', width: '100%', background: '#f1f5f9', borderRadius: '4px', marginBottom: '8px' }} />
+    <div style={{ height: '14px', width: '80%', background: '#f1f5f9', borderRadius: '4px' }} />
+  </div>
+);
+
+const Pagination = ({ pagination, onPageChange }) => {
+  if (!pagination || pagination.pages <= 1) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '24px', marginBottom: '24px' }}>
+      <button 
+        disabled={pagination.page === 1}
+        onClick={() => onPageChange(pagination.page - 1)}
+        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: pagination.page === 1 ? '#cbd5e1' : '#64748b', cursor: pagination.page === 1 ? 'not-allowed' : 'pointer' }}
+      >Previous</button>
+      {[...Array(pagination.pages)].map((_, i) => (
+        <button 
+          key={i}
+          onClick={() => onPageChange(i + 1)}
+          style={{ 
+            width: '40px', height: '40px', borderRadius: '8px', border: '1px solid', 
+            borderColor: pagination.page === i + 1 ? '#6366f1' : '#e2e8f0',
+            background: pagination.page === i + 1 ? '#6366f1' : 'white',
+            color: pagination.page === i + 1 ? 'white' : '#64748b',
+            fontWeight: '700', cursor: 'pointer'
+          }}
+        >{i + 1}</button>
+      ))}
+      <button 
+        disabled={pagination.page === pagination.pages}
+        onClick={() => onPageChange(pagination.page + 1)}
+        style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: pagination.page === pagination.pages ? '#cbd5e1' : '#64748b', cursor: pagination.page === pagination.pages ? 'not-allowed' : 'pointer' }}
+      >Next</button>
+    </div>
+  );
+};
 
 const defaultForm = { title: '', description: '', location: '', mode: 'in-person', registrationStartDate: '', registrationDeadline: '', eventStartDate: '', eventEndDate: '', maxTeams: 50, prizePool: '', tags: '' };
 
@@ -66,9 +112,10 @@ const AdminDateSplitField = ({ label, field, val, err, okMsg, setForm }) => {
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
-  const [hackathons, setHackathons] = useState([]);
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [hackathons, setHackathons] = useState([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [hackathonsLoading, setHackathonsLoading] = useState(true);
   const [view, setView] = useState('dashboard'); // 'dashboard' | 'active' | 'completed' | 'new' | 'edit'
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(defaultForm);
@@ -79,49 +126,68 @@ const AdminDashboard = () => {
   // User Directory State
   const [participants, setParticipants] = useState([]);
   const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [pPagination, setPPagination] = useState(null);
   const [pSearch, setPSearch] = useState('');
   const [pRole, setPRole] = useState('all');
   const [pHackathonId, setPHackathonId] = useState('');
+  const [pPage, setPPage] = useState(1);
 
-  useEffect(() => { fetchAll(); }, []);
+  // Hackathons Pagination State
+  const [hPagination, setHPagination] = useState(null);
+  const [hPage, setHPage] = useState(1);
 
-  const fetchAll = async () => {
-    setLoading(true);
-    try {
-      const [statsRes, hackRes] = await Promise.all([
-        axios.get(`${API}/admin/stats`),
-        axios.get(`${API}/admin/hackathons`)
-      ]);
-      setStats(statsRes.data);
-      setHackathons(hackRes.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
+  useEffect(() => { fetchAll(); }, [hPage]);
 
-  const fetchParticipants = async () => {
+  const fetchAll = useCallback(() => {
+    // Fetch Stats
+    axios.get(`${API}/admin/stats`)
+      .then(res => setStats(res.data))
+      .catch(e => console.error(e))
+      .finally(() => setStatsLoading(false));
+
+    // Fetch Hackathons
+    axios.get(`${API}/admin/hackathons`, { params: { page: hPage, limit: 10 } })
+      .then(res => {
+        setHackathons(res.data.hackathons);
+        setHPagination(res.data.pagination);
+      })
+      .catch(e => console.error(e))
+      .finally(() => setHackathonsLoading(false));
+  }, [hPage]);
+
+  const fetchParticipants = useCallback(async () => {
     setParticipantsLoading(true);
     setError('');
     try {
-      const testRes = await axios.get(`${API}/admin/test-route`);
-      console.log('Test Route Result:', testRes.data);
-      
-      console.log('Fetching users from:', `${API}/admin/user-directory`);
       const res = await axios.get(`${API}/admin/user-directory`, {
-        params: { search: pSearch, role: pRole, hackathonId: pHackathonId }
+        params: { search: pSearch, role: pRole, hackathonId: pHackathonId, page: pPage, limit: 20 }
       });
-      console.log('User Directory response:', res.data);
-      const data = Array.isArray(res.data) ? res.data : [];
-      setParticipants(data);
+      setParticipants(res.data.users || []);
+      setPPagination(res.data.pagination);
     } catch (e) { 
       console.error('Fetch Directory Error:', e);
       setError(`Failed to load user directory: ${e.response?.data?.message || e.message}`);
     }
     finally { setParticipantsLoading(false); }
-  };
+  }, [pSearch, pRole, pHackathonId, pPage]);
 
+  // Debounced search for participants
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (view === 'participants') fetchParticipants();
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [pSearch, fetchParticipants, view]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPPage(1);
+  }, [pSearch, pRole, pHackathonId]);
+
+  // Refetch when filters change (except search which is debounced)
   useEffect(() => {
     if (view === 'participants') fetchParticipants();
-  }, [view, pSearch, pRole, pHackathonId]);
+  }, [view, pRole, pHackathonId, pPage]);
 
 
   const openNew = () => { setForm(defaultForm); setEditTarget(null); setError(''); setView('new'); };
@@ -209,15 +275,24 @@ const AdminDashboard = () => {
     { key: 'participants', icon: '👥', label: 'User Directory' },
   ];
 
-  const activeHackathons    = hackathons.filter(h => new Date(h.eventEndDate) >= new Date());
-  const completedHackathons = hackathons.filter(h => new Date(h.eventEndDate) < new Date());
+  const activeHackathons = useMemo(() => 
+    hackathons.filter(h => new Date(h.eventEndDate) >= new Date()),
+    [hackathons]
+  );
+  const completedHackathons = useMemo(() => 
+    hackathons.filter(h => new Date(h.eventEndDate) < new Date()),
+    [hackathons]
+  );
 
-  if (loading) return (
+  if (statsLoading && hackathonsLoading && !stats && hackathons.length === 0) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '48px', height: '48px', border: '3px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-        <p style={{ color: '#64748b', fontWeight: '500' }}>Loading admin panel...</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <p style={{ color: '#64748b', fontWeight: '500' }}>Initializing admin panel...</p>
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+          @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        `}</style>
       </div>
     </div>
   );
@@ -256,15 +331,25 @@ const AdminDashboard = () => {
         {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px 16px', borderRadius: '10px', marginBottom: '20px', fontWeight: '600', fontSize: '14px' }}>❌ {error}</div>}
 
         {/* ── OVERVIEW ── */}
-        {view === 'dashboard' && stats && (
+        {view === 'dashboard' && (
           <div style={{ display: 'grid', gap: '32px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-              <StatCard icon="🏆" label="Hackathons" value={stats.totalHackathons} color="#eef2ff" />
-              <StatCard icon="👥" label="Total Teams" value={stats.totalTeams} color="#f0fdf4" />
-              <StatCard icon="🎓" label="Participants" value={stats.totalParticipants} color="#fffbeb" />
-              <StatCard icon="⚖️" label="Judges" value={stats.totalJudges} color="#ecfeff" />
-              <StatCard icon="👑" label="Admins" value={stats.totalAdmins} color="#fef2f2" />
-            </div>
+            {statsLoading && !stats ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                <StatCard label="Hackathons" loading color="#eef2ff" />
+                <StatCard label="Total Teams" loading color="#f0fdf4" />
+                <StatCard label="Participants" loading color="#fffbeb" />
+                <StatCard label="Judges" loading color="#ecfeff" />
+                <StatCard label="Admins" loading color="#fef2f2" />
+              </div>
+            ) : stats && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                <StatCard icon="🏆" label="Hackathons" value={stats.totalHackathons} color="#eef2ff" />
+                <StatCard icon="👥" label="Total Teams" value={stats.totalTeams} color="#f0fdf4" />
+                <StatCard icon="🎓" label="Participants" value={stats.totalParticipants} color="#fffbeb" />
+                <StatCard icon="⚖️" label="Judges" value={stats.totalJudges} color="#ecfeff" />
+                <StatCard icon="👑" label="Admins" value={stats.totalAdmins} color="#fef2f2" />
+              </div>
+            )}
 
             {/* Quick Summary Section */}
             <div style={{ background: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
@@ -298,7 +383,13 @@ const AdminDashboard = () => {
               >➕ Schedule New</button>
             </div>
 
-            {activeHackathons.length === 0 ? (
+            {hackathonsLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </div>
+            ) : activeHackathons.length === 0 ? (
               <div style={{ background: 'white', borderRadius: '16px', padding: '60px 24px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
                 <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚀</div>
                 <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>No active hackathons</h3>
@@ -357,6 +448,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 ))}
+                <Pagination pagination={hPagination} onPageChange={setHPage} />
               </div>
             )}
           </div>
@@ -375,7 +467,12 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {completedHackathons.length === 0 ? (
+            {hackathonsLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <SkeletonRow />
+                <SkeletonRow />
+              </div>
+            ) : completedHackathons.length === 0 ? (
               <div style={{ background: 'white', borderRadius: '16px', padding: '60px 24px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
                 <div style={{ fontSize: '56px', marginBottom: '16px' }}>⌛</div>
                 <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>No completed hackathons</h3>
@@ -411,6 +508,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 ))}
+                <Pagination pagination={hPagination} onPageChange={setHPage} />
               </div>
             )}
           </div>
@@ -493,6 +591,7 @@ const AdminDashboard = () => {
                   )}
                 </tbody>
               </table>
+              <Pagination pagination={pPagination} onPageChange={setPPage} />
             </div>
           </div>
         )}

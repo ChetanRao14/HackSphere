@@ -11,13 +11,15 @@ const teamSchema = new mongoose.Schema({
   hackathon: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Hackathon',
-    required: true
+    required: true,
+    index: true
   },
   // auto-set: 'accepted' if slots remain, 'waitlisted' if full
   status: {
     type: String,
     enum: ['accepted', 'waitlisted'],
-    default: 'accepted'
+    default: 'accepted',
+    index: true
   },
   registrationRank: { type: Number }, // position in sign-up queue
   createdBy: {

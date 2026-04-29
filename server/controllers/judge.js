@@ -65,7 +65,7 @@ const getTeams = async (req, res) => {
       .sort({ registrationRank: 1 })   // show in registration order
       .skip(skip)
       .limit(limit)
-      .populate('createdBy', 'name email college city')
+      .populate('createdBy', 'name email college place')
       .populate('hackathon', 'title');
 
     const total = await Team.countDocuments(query);

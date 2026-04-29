@@ -84,13 +84,28 @@ const createHackathon = async (req, res) => {
   }
 };
 
-// Get all hackathons
+// Get all hackathons (paginated)
 const getHackathons = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await Hackathon.countDocuments();
     const hackathons = await Hackathon.find()
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate('createdBy', 'name email');
-    res.json(hackathons);
+
+    res.json({
+      hackathons,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to fetch hackathons' });
@@ -164,11 +179,15 @@ const getStats = async (req, res) => {
   }
 };
 
-// Directory view: Get users with optional role/search filter
+// Directory view: Get users with optional role/search filter (paginated)
 const getParticipants = async (req, res) => {
   try {
     const { search, role, hackathonId, college, place } = req.query;
-    console.log('Fetching participants with:', { search, role, hackathonId, college, place });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    console.log('Fetching participants with:', { search, role, hackathonId, college, place, page, limit });
     let query = {};
     
     if (role && role !== 'all') {
@@ -196,10 +215,21 @@ const getParticipants = async (req, res) => {
       }
     }
 
+    const total = await User.countDocuments(query);
     const users = await User.find(query)
       .select('name email role college place createdAt')
-      .sort({ createdAt: -1 });
-    res.json(users);
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      users,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to fetch directory.' });
