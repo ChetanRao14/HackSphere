@@ -15,11 +15,19 @@ const AbstractModal = ({ team, onClose }) => (
           <div>
             <p style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 6px' }}>Submission #{team.registrationRank}</p>
             <h3 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '0 0 10px', letterSpacing: '-0.3px' }}>{team.teamName}</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
               {team.members.map((m, i) => (
                 <span key={i} style={{ background: '#eef2ff', color: '#6366f1', border: '1px solid #c7d2fe', padding: '3px 10px', borderRadius: '100px', fontSize: '12px', fontWeight: '600' }}>{m}</span>
               ))}
             </div>
+            {team.createdBy && (
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+                <div>
+                  <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', margin: '0 0 2px' }}>Team Lead</p>
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', margin: 0 }}>{team.createdBy.name}</p>
+                </div>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
             <button onClick={onClose} style={{ width: '34px', height: '34px', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white', cursor: 'pointer', color: '#64748b', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
@@ -161,6 +169,10 @@ export default function JudgeDashboard() {
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState(null);
   const [editingTimings, setEditingTimings] = useState(false);
+  const [filterCollege, setFilterCollege] = useState('');
+  const [filterCity, setFilterCity] = useState('');
+
+  const [pRole, setPRole] = useState('all');
 
   useEffect(() => {
     fetchHackathons();
@@ -198,7 +210,11 @@ export default function JudgeDashboard() {
   };
 
   const canReview = (h) => {
-    const isJoined = h.judges?.some(j => j.toString() === user?.id);
+    const isJoined = h.judges?.some(j => {
+      const jId = j?._id || j;
+      const uId = user?.id || user?._id;
+      return jId?.toString() === uId?.toString();
+    });
     const deadlinePassed = new Date() >= new Date(h.registrationDeadline);
     return isJoined && deadlinePassed;
   };
@@ -206,7 +222,16 @@ export default function JudgeDashboard() {
   const fetchTeams = async () => {
     setTeamsLoading(true);
     try {
-      const r = await axios.get(`${API}/judge/teams`, { params: { page, limit: 10, search, hackathonId: selectedHackathon._id } });
+      const r = await axios.get(`${API}/judge/teams`, { 
+        params: { 
+          page, 
+          limit: 10, 
+          search, 
+          hackathonId: selectedHackathon._id,
+          college: filterCollege,
+          city: filterCity
+        } 
+      });
       setTeams(r.data.teams); setTotalPages(r.data.totalPages); setTotal(r.data.totalTeams);
     } catch (e) { console.error(e); }
     finally { setTeamsLoading(false); }
@@ -214,12 +239,36 @@ export default function JudgeDashboard() {
 
   useEffect(() => {
     if (selectedHackathon) fetchTeams();
-  }, [page, search, selectedHackathon]);
+  }, [page, search, selectedHackathon, filterCollege, filterCity]);
+
 
   const now = new Date();
-  const registeredActive = hackathons.filter(h => h.judges?.some(j => j.toString() === user?.id) && new Date(h.eventEndDate) > now);
-  const availableToJoin = hackathons.filter(h => !h.judges?.some(j => j.toString() === user?.id) && new Date(h.eventEndDate) > now);
-  const judgingHistory  = hackathons.filter(h => h.judges?.some(j => j.toString() === user?.id) && new Date(h.eventEndDate) <= now);
+  const registeredActive = hackathons.filter(h => {
+    const isJoined = h.judges?.some(j => {
+      const jId = j?._id || j;
+      const uId = user?.id || user?._id;
+      return jId?.toString() === uId?.toString();
+    });
+    return isJoined && new Date(h.eventEndDate) > now;
+  });
+
+  const availableToJoin = hackathons.filter(h => {
+    const isJoined = h.judges?.some(j => {
+      const jId = j?._id || j;
+      const uId = user?.id || user?._id;
+      return jId?.toString() === uId?.toString();
+    });
+    return !isJoined && new Date(h.eventEndDate) > now;
+  });
+
+  const judgingHistory = hackathons.filter(h => {
+    const isJoined = h.judges?.some(j => {
+      const jId = j?._id || j;
+      const uId = user?.id || user?._id;
+      return jId?.toString() === uId?.toString();
+    });
+    return isJoined && new Date(h.eventEndDate) <= now;
+  });
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: '16px', fontFamily: 'Inter, sans-serif' }}>
@@ -234,7 +283,13 @@ export default function JudgeDashboard() {
       {/* Page Header */}
       <div style={{ marginBottom: '28px' }}>
         <span style={{ background: '#ecfeff', color: '#0891b2', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.06em' }}>⚖️ Judge Panel</span>
-        <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '12px 0 6px', letterSpacing: '-0.5px' }}>Judge Dashboard</h1>
+        <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '12px 0 6px', letterSpacing: '-0.5px' }}>
+          Welcome, {user?.name || 'Judge'}!
+        </h1>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: '#64748b', fontSize: '15px', marginBottom: '8px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🏛️ {user?.college || 'No Org'}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📍 {user?.place || 'No Place'}</span>
+        </div>
         <p style={{ color: '#64748b', margin: 0, fontSize: '15px' }}>
           {selectedHackathon ? `Judging: ${selectedHackathon.title}` : 'Manage your judging events and review abstracts.'}
         </p>
@@ -267,7 +322,10 @@ export default function JudgeDashboard() {
                   <div key={h._id} style={{ ...card, padding: '24px', transition: 'all 0.2s', borderLeft: `6px solid #0891b2` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>{h.title}</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                          <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>{h.title}</h3>
+                          <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: '800', border: '1px solid #bbf7d0' }}>✅ REGISTERED</span>
+                        </div>
                         <div style={{ display: 'flex', gap: '20px', color: '#64748b', fontSize: '13px', fontWeight: '600' }}>
                           <span>📅 Starts: {new Date(h.eventStartDate).toLocaleDateString()}</span>
                           <span>🏆 Ends: {new Date(h.eventEndDate).toLocaleDateString()}</span>
@@ -380,6 +438,7 @@ export default function JudgeDashboard() {
               )}
             </div>
           )}
+
         </div>
       ) : (
         /* ── ABSTRACTS VIEW ── */
@@ -405,17 +464,15 @@ export default function JudgeDashboard() {
             </div>
           </div>
 
-          <div style={{ marginBottom: '16px', display: 'flex', gap: '10px' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
+            <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>🔍</span>
               <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Search by team name..."
+                placeholder="Search team name..."
                 style={{ width: '100%', paddingLeft: '40px', paddingRight: '16px', paddingTop: '11px', paddingBottom: '11px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', fontFamily: 'Inter, sans-serif', outline: 'none', background: 'white', color: '#1e293b', boxSizing: 'border-box', transition: 'all 0.2s' }}
                 onFocus={e => { e.target.style.borderColor = '#0891b2'; e.target.style.boxShadow = '0 0 0 3px rgba(8,145,178,0.1)'; }}
                 onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
-          </div>
 
           <div style={card}>
             {teamsLoading ? (
@@ -431,7 +488,7 @@ export default function JudgeDashboard() {
               </div>
             ) : (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr 1fr 110px 130px', padding: '12px 20px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', borderRadius: '16px 16px 0 0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '52px 1.5fr 1fr 110px 130px', padding: '12px 20px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', borderRadius: '16px 16px 0 0' }}>
                   {['#', 'Team', 'Members', 'Status', 'Abstract'].map(h => (
                     <span key={h} style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</span>
                   ))}
@@ -439,7 +496,7 @@ export default function JudgeDashboard() {
 
                 {teams.map((team, i) => (
                   <div key={team._id}
-                    style={{ display: 'grid', gridTemplateColumns: '52px 1fr 1fr 110px 130px', padding: '16px 20px', borderBottom: i < teams.length - 1 ? '1px solid #f1f5f9' : 'none', alignItems: 'center', transition: 'background 0.15s' }}
+                    style={{ display: 'grid', gridTemplateColumns: '52px 1.5fr 1fr 110px 130px', padding: '16px 20px', borderBottom: i < teams.length - 1 ? '1px solid #f1f5f9' : 'none', alignItems: 'center', transition: 'background 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >

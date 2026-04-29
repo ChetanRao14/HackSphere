@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -38,6 +39,7 @@ export default function ParticipantDashboard() {
   const [selectedHackathon, setSelectedHackathon] = useState(null);
   const [members, setMembers] = useState(['']);
   const [form, setForm] = useState({ teamName: '', abstract: '' });
+  const { user } = useContext(AuthContext);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -183,14 +185,17 @@ export default function ParticipantDashboard() {
 
   return (
     <div style={{ width: '100%', margin: '0 auto', fontFamily: "'Inter', sans-serif" }}>
-      <div style={{ marginBottom: '28px' }}>
-        <span style={{ background: '#eef2ff', color: '#6366f1', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.06em' }}>🎓 Participant Portal</span>
-        <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '12px 0 6px', letterSpacing: '-0.5px' }}>
-          Hackathon Dashboard
-        </h1>
-        <p style={{ color: '#64748b', margin: 0, fontSize: '15px' }}>
-          Manage your registrations and explore new events.
-        </p>
+      <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
+        <div>
+          <span style={{ background: '#eef2ff', color: '#6366f1', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.06em' }}>🎓 Participant Portal</span>
+          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '12px 0 6px', letterSpacing: '-0.5px' }}>
+            Welcome, {user.name || 'Participant'}!
+          </h1>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: '#64748b', fontSize: '15px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🏛️ {user.college || 'No Org'}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📍 {user.place || 'No Place'}</span>
+          </div>
+        </div>
       </div>
 
       {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '12px 16px', borderRadius: '10px', marginBottom: '20px', fontSize: '14px', fontWeight: '600' }}>⚠️ {error}</div>}

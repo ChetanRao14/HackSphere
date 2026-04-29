@@ -16,7 +16,6 @@ const StatusBadge = ({ status }) => {
   const s = statusColors[status] || statusColors.upcoming;
   return <span style={{ background: s.bg, color: s.color, border: `1.5px solid ${s.border}`, padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: '700' }}>{s.label}</span>;
 };
-
 const StatCard = ({ icon, label, value, color }) => (
   <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '16px' }}>
     <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>{icon}</div>
@@ -70,12 +69,21 @@ const AdminDashboard = () => {
   const [hackathons, setHackathons] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('dashboard'); // 'dashboard' | 'hackathons' | 'new' | 'edit'
+  const [view, setView] = useState('dashboard'); // 'dashboard' | 'active' | 'completed' | 'new' | 'edit'
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // User Directory State
+  const [participants, setParticipants] = useState([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [pSearch, setPSearch] = useState('');
+  const [pRole, setPRole] = useState('all');
+  const [pHackathonId, setPHackathonId] = useState('');
+  const [pCollege, setPCollege] = useState('');
+  const [pPlace, setPPlace] = useState('');
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -91,6 +99,32 @@ const AdminDashboard = () => {
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
+
+  const fetchParticipants = async () => {
+    setParticipantsLoading(true);
+    setError('');
+    try {
+      const testRes = await axios.get(`${API}/admin/test-route`);
+      console.log('Test Route Result:', testRes.data);
+      
+      console.log('Fetching users from:', `${API}/admin/user-directory`);
+      const res = await axios.get(`${API}/admin/user-directory`, {
+        params: { search: pSearch, role: pRole, hackathonId: pHackathonId, college: pCollege, place: pPlace }
+      });
+      console.log('User Directory response:', res.data);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setParticipants(data);
+    } catch (e) { 
+      console.error('Fetch Directory Error:', e);
+      setError(`Failed to load user directory: ${e.response?.data?.message || e.message}`);
+    }
+    finally { setParticipantsLoading(false); }
+  };
+
+  useEffect(() => {
+    if (view === 'participants') fetchParticipants();
+  }, [view, pSearch, pRole, pHackathonId, pCollege, pPlace]);
+
 
   const openNew = () => { setForm(defaultForm); setEditTarget(null); setError(''); setView('new'); };
   const openEdit = (h) => {
@@ -149,7 +183,7 @@ const AdminDashboard = () => {
         setSuccess('Hackathon created successfully!');
       }
       await fetchAll();
-      setView('hackathons');
+      setView('active');
       setTimeout(() => setSuccess(''), 3500);
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed.');
@@ -172,8 +206,13 @@ const AdminDashboard = () => {
 
   const sideItems = [
     { key: 'dashboard', icon: '📊', label: 'Overview' },
-    { key: 'hackathons', icon: '🏆', label: 'Hackathons' },
+    { key: 'active', icon: '🔥', label: 'Active & Upcoming' },
+    { key: 'completed', icon: '⌛', label: 'Completed' },
+    { key: 'participants', icon: '👥', label: 'User Directory' },
   ];
+
+  const activeHackathons    = hackathons.filter(h => new Date(h.eventEndDate) >= new Date());
+  const completedHackathons = hackathons.filter(h => new Date(h.eventEndDate) < new Date());
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -191,7 +230,10 @@ const AdminDashboard = () => {
       {/* ── GLOBAL WELCOME ── */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Welcome back, {user?.name} 👋</h1>
-        <p style={{ color: '#64748b', margin: 0 }}>Here's your administrative command center.</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: '#64748b', fontSize: '15px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🏛️ {user?.college || 'No Org'}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📍 {user?.place || 'No Place'}</span>
+        </div>
       </div>
 
       {/* ── HORIZONTAL ADMIN PANEL ── */}
@@ -199,7 +241,10 @@ const AdminDashboard = () => {
         <p style={{ fontSize: '12px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 12px 0 0' }}>Admin Panel</p>
         
         {sideItems.map(item => (
-          <button key={item.key} onClick={() => setView(item.key)}
+          <button key={item.key} onClick={() => { 
+            if (item.key === 'participants') setPHackathonId(''); 
+            setView(item.key); 
+          }}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: view === item.key ? '700' : '600', transition: 'all 0.15s', background: view === item.key ? '#eef2ff' : 'transparent', color: view === item.key ? '#6366f1' : '#64748b' }}
           ><span>{item.icon}</span>{item.label}</button>
         ))}
@@ -207,7 +252,7 @@ const AdminDashboard = () => {
         <div style={{ width: '1px', height: '24px', background: '#e2e8f0', margin: '0 4px' }} />
 
         <button onClick={openNew}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: '700', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: '700', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}
         ><span>➕</span> New Hackathon</button>
       </div>
 
@@ -219,8 +264,7 @@ const AdminDashboard = () => {
         {/* ── OVERVIEW ── */}
         {view === 'dashboard' && stats && (
           <div style={{ display: 'grid', gap: '32px' }}>
-            {/* Stats Row - 5 even columns for a balanced fit */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
               <StatCard icon="🏆" label="Hackathons" value={stats.totalHackathons} color="#eef2ff" />
               <StatCard icon="👥" label="Total Teams" value={stats.totalTeams} color="#f0fdf4" />
               <StatCard icon="🎓" label="Participants" value={stats.totalParticipants} color="#fffbeb" />
@@ -228,57 +272,30 @@ const AdminDashboard = () => {
               <StatCard icon="👑" label="Admins" value={stats.totalAdmins} color="#fef2f2" />
             </div>
 
-            {/* Dashboard Content Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-              {/* Recent Activity Card */}
-              <div style={{ background: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 }}>Recent Hackathons</h3>
-                    <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>Quick access to your latest scheduled events</p>
-                  </div>
-                <button onClick={() => setView('hackathons')} style={{ background: 'none', border: 'none', color: '#6366f1', fontWeight: '600', fontSize: '14px', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>View all →</button>
-              </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {hackathons.slice(0, 4).map(h => (
-                    <div key={h._id} 
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderRadius: '14px', background: '#f8fafc', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'all 0.2s' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                      onClick={() => openEdit(h)}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1px solid #e2e8f0' }}>🏆</div>
-                        <div>
-                          <p style={{ fontWeight: '700', color: '#0f172a', margin: '0 0 2px', fontSize: '15px' }}>{h.title}</p>
-                          <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#94a3b8', fontWeight: '500' }}>
-                            <span>📍 {h.location}</span>
-                            <span>•</span>
-                            <span>📅 {new Date(h.eventStartDate).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <StatusBadge status={h.status} />
-                    </div>
-                  ))}
-                  {hackathons.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                      <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>No hackathons scheduled yet. <button onClick={openNew} style={{ background: 'none', border: 'none', color: '#6366f1', fontWeight: '700', cursor: 'pointer', padding: 0, fontFamily: 'Inter, sans-serif' }}>Create one →</button></p>
-                    </div>
-                  )}
+            {/* Quick Summary Section */}
+            <div style={{ background: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 24px' }}>Platform Activity</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+                <div style={{ borderLeft: '4px solid #6366f1', paddingLeft: '20px' }}>
+                  <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px', fontWeight: '600' }}>Active Hackathons</p>
+                  <p style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: 0 }}>{activeHackathons.length}</p>
+                </div>
+                <div style={{ borderLeft: '4px solid #94a3b8', paddingLeft: '20px' }}>
+                  <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px', fontWeight: '600' }}>Concluded Events</p>
+                  <p style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: 0 }}>{completedHackathons.length}</p>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── HACKATHONS LIST ── */}
-        {view === 'hackathons' && (
+        {/* ── ACTIVE & UPCOMING ── */}
+        {view === 'active' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <div>
-                <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.5px' }}>Hackathons</h1>
-                <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>{hackathons.length} scheduled event{hackathons.length !== 1 ? 's' : ''}</p>
+                <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.5px' }}>Active & Upcoming</h1>
+                <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>{activeHackathons.length} current or future event{activeHackathons.length !== 1 ? 's' : ''}</p>
               </div>
               <button onClick={openNew}
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,0.35)', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
@@ -287,16 +304,16 @@ const AdminDashboard = () => {
               >➕ Schedule New</button>
             </div>
 
-            {hackathons.length === 0 ? (
+            {activeHackathons.length === 0 ? (
               <div style={{ background: 'white', borderRadius: '16px', padding: '60px 24px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
-                <div style={{ fontSize: '56px', marginBottom: '16px' }}>🏆</div>
-                <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>No hackathons yet</h3>
+                <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚀</div>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>No active hackathons</h3>
                 <p style={{ color: '#94a3b8', margin: '0 0 20px', fontSize: '14px' }}>Schedule your first hackathon to get started.</p>
                 <button onClick={openNew} style={{ padding: '10px 24px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Create Hackathon</button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {hackathons.map(h => (
+                {activeHackathons.map(h => (
                   <div key={h._id} style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9', transition: 'box-shadow 0.2s' }}
                     onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'}
@@ -325,18 +342,22 @@ const AdminDashboard = () => {
                             </span>
                           ))}
                         </div>
-                        {h.tags?.length > 0 && <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
-                          {h.tags.map((t, i) => <span key={i} style={{ background: '#eef2ff', color: '#6366f1', padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>#{t}</span>)}
-                        </div>}
                       </div>
-                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                        <button onClick={() => openEdit(h)} style={{ padding: '8px 16px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: 'white', color: '#374151', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.color = '#6366f1'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#374151'; }}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => { setPHackathonId(h._id); setView('participants'); }}
+                          style={{ flex: 1, background: '#f0fdf4', color: '#16a34a', border: '1.5px solid #bbf7d0', padding: '9px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#16a34a'; e.currentTarget.style.color = 'white'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.color = '#16a34a'; }}
+                        >👥 Users</button>
+                        <button onClick={() => openEdit(h)}
+                          style={{ flex: 1, background: '#f8fafc', color: '#475569', border: '1.5px solid #e2e8f0', padding: '9px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.color = '#6366f1'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }}
                         >✏️ Edit</button>
-                        <button onClick={() => handleDelete(h._id)} style={{ padding: '8px 16px', border: '1.5px solid #fecaca', borderRadius: '8px', background: '#fef2f2', color: '#dc2626', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = 'white'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
+                        <button onClick={() => handleDelete(h._id)}
+                          style={{ background: '#fef2f2', color: '#dc2626', border: 'none', padding: '9px 12px', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.style.color = 'white'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
                         >🗑️ Delete</button>
                       </div>
                     </div>
@@ -347,11 +368,158 @@ const AdminDashboard = () => {
           </div>
         )}
 
+
+
+
+        {/* ── COMPLETED ── */}
+        {view === 'completed' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div>
+                <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.5px' }}>Completed Hackathons</h1>
+                <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>{completedHackathons.length} concluded event{completedHackathons.length !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+
+            {completedHackathons.length === 0 ? (
+              <div style={{ background: 'white', borderRadius: '16px', padding: '60px 24px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+                <div style={{ fontSize: '56px', marginBottom: '16px' }}>⌛</div>
+                <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>No completed hackathons</h3>
+                <p style={{ color: '#94a3b8', margin: 0, fontSize: '14px' }}>Past events will appear here once they conclude.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {completedHackathons.map(h => (
+                  <div key={h._id} style={{ background: '#f8fafc', borderRadius: '16px', padding: '24px', border: '1.5px solid #e2e8f0', opacity: 0.85 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                          <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#334155', margin: 0 }}>{h.title}</h3>
+                          <span style={{ background: '#f1f5f9', color: '#64748b', border: '1.5px solid #e2e8f0', padding: '4px 12px', borderRadius: '100px', fontSize: '11px', fontWeight: '700' }}>CONCLUDED</span>
+                        </div>
+                        <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 14px' }}>{h.description.length > 150 ? h.description.slice(0, 150) + '...' : h.description}</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                           <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>📍 {h.location}</span>
+                           <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>📅 Finished: {new Date(h.eventEndDate).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => { setPHackathonId(h._id); setView('participants'); }}
+                          style={{ background: '#f0f9ff', color: '#0369a1', border: '1.5px solid #bae6fd', padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                        >👥 Users</button>
+                        <button onClick={() => openEdit(h)}
+                          style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                        >Review</button>
+                        <button onClick={() => handleDelete(h._id)}
+                          style={{ background: '#fef2f2', color: '#dc2626', border: 'none', padding: '8px 16px', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}
+                        >Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── USER DIRECTORY ── */}
+        {view === 'participants' && (
+          <div>
+            <div style={{ marginBottom: '28px' }}>
+              <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.5px' }}>User Directory</h1>
+              <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>
+                {pHackathonId 
+                  ? `Viewing users registered for: ${hackathons.find(h => h._id === pHackathonId)?.title || 'Selected Event'}` 
+                  : 'Manage and filter all platform users'}
+              </p>
+            </div>
+
+            {/* Filters Row */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '24px', background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Search Name</label>
+                <input value={pSearch} onChange={e => setPSearch(e.target.value)} placeholder="e.g. John Doe" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
+              </div>
+              <div style={{ width: '160px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Role</label>
+                <select value={pRole} onChange={e => setPRole(e.target.value)} style={inputStyle} onFocus={focusIn} onBlur={focusOut}>
+                  <option value="all">All Roles</option>
+                  <option value="participant">Participants</option>
+                  <option value="judge">Judges</option>
+                  <option value="admin">Admins</option>
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Filter By Hackathon</label>
+                <select value={pHackathonId} onChange={e => setPHackathonId(e.target.value)} style={inputStyle} onFocus={focusIn} onBlur={focusOut}>
+                  <option value="">All Events</option>
+                  {hackathons.map(h => <option key={h._id} value={h._id}>{h.title}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: '150px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>College</label>
+                <input value={pCollege} onChange={e => setPCollege(e.target.value)} placeholder="e.g. Stanford" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
+              </div>
+              <div style={{ flex: 1, minWidth: '150px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Place</label>
+                <input value={pPlace} onChange={e => setPPlace(e.target.value)} placeholder="e.g. California" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
+              </div>
+            </div>
+
+            {/* Results Table */}
+            <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #f1f5f9', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                <thead style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                  <tr>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>NAME</th>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>EMAIL</th>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>ROLE</th>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>COLLEGE</th>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>PLACE</th>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>JOINED</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {participantsLoading && (
+                    <tr>
+                      <td colSpan="6" style={{ padding: '32px', textAlign: 'center', color: '#64748b' }}>
+                         <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.6s linear infinite', verticalAlign: 'middle', marginRight: '10px' }} />
+                         Loading users...
+                      </td>
+                    </tr>
+                  )}
+                  {!participantsLoading && participants.map(p => (
+                    <tr key={p._id} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }}>
+                      <td style={{ padding: '16px 24px', fontWeight: '600', color: '#0f172a' }}>{p.name}</td>
+                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.email}</td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <span style={{ 
+                          padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase',
+                          background: p.role === 'admin' ? '#fef2f2' : p.role === 'judge' ? '#ecfeff' : '#f0fdf4',
+                          color: p.role === 'admin' ? '#dc2626' : p.role === 'judge' ? '#0891b2' : '#16a34a'
+                        }}>{p.role}</span>
+                      </td>
+                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.college || '-'}</td>
+                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.place || '-'}</td>
+                      <td style={{ padding: '16px 24px', color: '#94a3b8' }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                  {participants.length === 0 && !participantsLoading && (
+                    <tr>
+                      <td colSpan="6" style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No users found matching these filters.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* ── CREATE / EDIT FORM ── */}
         {(view === 'new' || view === 'edit') && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-              <button onClick={() => setView('hackathons')} style={{ width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #e2e8f0', borderRadius: '10px', background: 'white', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>←</button>
+              <button onClick={() => setView('active')} style={{ width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #e2e8f0', borderRadius: '10px', background: 'white', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>←</button>
               <div>
                 <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.5px' }}>{view === 'edit' ? 'Edit Hackathon' : 'Schedule New Hackathon'}</h1>
                 <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>{view === 'edit' ? `Editing: ${editTarget?.title}` : 'Fill in the details to schedule a hackathon'}</p>
@@ -455,7 +623,7 @@ const AdminDashboard = () => {
                   <button type="submit" disabled={saving}
                     style={{ flex: 1, padding: '14px', borderRadius: '12px', border: 'none', background: saving ? '#a5b4fc' : 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', fontSize: '15px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'Inter, sans-serif', boxShadow: saving ? 'none' : '0 4px 15px rgba(99,102,241,0.35)', transition: 'all 0.2s' }}
                   >{saving ? '⏳ Saving...' : (view === 'edit' ? '✅ Save Changes' : '🚀 Schedule Hackathon')}</button>
-                  <button type="button" onClick={() => setView('hackathons')}
+                  <button type="button" onClick={() => setView('active')}
                     style={{ padding: '14px 24px', borderRadius: '12px', border: '1.5px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '15px', fontWeight: '600', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
                   >Cancel</button>
                 </div>

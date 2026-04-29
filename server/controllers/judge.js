@@ -27,6 +27,8 @@ const getTeams = async (req, res) => {
     const limit  = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
     const hackathonId = req.query.hackathonId || '';
+    const filterCollege = req.query.college || '';
+    const filterPlace    = req.query.place    || '';
 
     if (!hackathonId) return res.status(400).json({ message: 'hackathonId is required.' });
 
@@ -47,12 +49,23 @@ const getTeams = async (req, res) => {
     const query = { hackathon: hackathonId };
     if (search) query.teamName = { $regex: search, $options: 'i' };
 
+    // If college/place filter is specified, first find matching user IDs
+    if (filterCollege || filterPlace) {
+      const userQuery = {};
+      if (filterCollege) userQuery.college = { $regex: filterCollege, $options: 'i' };
+      if (filterPlace)    userQuery.place    = { $regex: filterPlace,    $options: 'i' };
+      const User = require('../models/User');
+      const matchingUsers = await User.find(userQuery).select('_id');
+      const matchingIds = matchingUsers.map(u => u._id);
+      query.createdBy = { $in: matchingIds };
+    }
+
     const skip  = (page - 1) * limit;
     const teams = await Team.find(query)
       .sort({ registrationRank: 1 })   // show in registration order
       .skip(skip)
       .limit(limit)
-      .populate('createdBy', 'name email')
+      .populate('createdBy', 'name email college city')
       .populate('hackathon', 'title');
 
     const total = await Team.countDocuments(query);
@@ -86,4 +99,31 @@ const leaveHackathon = async (req, res) => {
   }
 };
 
-module.exports = { getTeams, joinHackathon, leaveHackathon };
+// Get all participants/judges for directory view
+const getParticipants = async (req, res) => {
+  try {
+    const { college, place, search, role } = req.query;
+    const User = require('../models/User');
+    let query = {};
+    
+    if (role && role !== 'all') {
+      query.role = role;
+    } else {
+      query.role = { $in: ['participant', 'judge'] };
+    }
+
+    if (college) query.college = { $regex: college, $options: 'i' };
+    if (place)    query.place    = { $regex: place,    $options: 'i' };
+    if (search)  query.name    = { $regex: search,  $options: 'i' };
+
+    const participants = await User.find(query)
+      .select('name email role college place createdAt')
+      .sort({ createdAt: -1 });
+    res.json(participants);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch directory.' });
+  }
+};
+
+module.exports = { getTeams, joinHackathon, leaveHackathon, getParticipants };

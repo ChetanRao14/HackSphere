@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Hackathon = require('../models/Hackathon');
 const Team = require('../models/Team');
 const User = require('../models/User');
@@ -163,4 +164,46 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { createHackathon, getHackathons, updateHackathon, deleteHackathon, getStats };
+// Directory view: Get users with optional role/search filter
+const getParticipants = async (req, res) => {
+  try {
+    const { search, role, hackathonId, college, place } = req.query;
+    console.log('Fetching participants with:', { search, role, hackathonId, college, place });
+    let query = {};
+    
+    if (role && role !== 'all') {
+      query.role = role;
+    }
+
+    if (search) query.name = { $regex: search, $options: 'i' };
+    if (college) query.college = { $regex: college, $options: 'i' };
+    if (place) query.place = { $regex: place, $options: 'i' };
+
+    // If hackathonId is provided, restrict to users involved in that event
+    if (hackathonId && mongoose.Types.ObjectId.isValid(hackathonId)) {
+      const h = await Hackathon.findById(hackathonId).select('judges');
+      if (h) {
+        const teams = await Team.find({ hackathon: hackathonId }).select('createdBy');
+        const pIdsFromTeams = teams.map(t => t.createdBy);
+        
+        if (role === 'judge') {
+          query._id = { $in: h.judges };
+        } else if (role === 'participant') {
+          query._id = { $in: pIdsFromTeams };
+        } else {
+          query._id = { $in: [...h.judges, ...pIdsFromTeams] };
+        }
+      }
+    }
+
+    const users = await User.find(query)
+      .select('name email role college place createdAt')
+      .sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch directory.' });
+  }
+};
+
+module.exports = { createHackathon, getHackathons, updateHackathon, deleteHackathon, getStats, getParticipants };

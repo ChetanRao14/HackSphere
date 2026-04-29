@@ -10,22 +10,28 @@ export const AuthProvider = ({ children }) => {
 
   // Set axios header + restore user — single effect to avoid race condition
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      localStorage.setItem('token', token);
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const fetchUser = async () => {
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        localStorage.setItem('token', token);
+        try {
+          const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/me`);
+          setUser(res.data);
+          localStorage.setItem('user', JSON.stringify(res.data));
+        } catch (e) {
+          console.error('Failed to fetch user:', e);
+          setToken(null);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
       } else {
-        // Token exists but no user data → clear everything
-        setToken(null);
+        delete axios.defaults.headers.common['Authorization'];
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-      localStorage.removeItem('token');
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    fetchUser();
   }, [token]);
 
   const login = (userData, jwtToken) => {

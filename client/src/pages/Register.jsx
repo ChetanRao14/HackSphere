@@ -37,7 +37,7 @@ const ROLES = [
 ];
 
 const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'participant', adminCode: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'participant', adminCode: '', college: '', place: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -171,6 +171,20 @@ const Register = () => {
               <input name="password" type="password" required value={formData.password} onChange={handleChange} placeholder="Minimum 6 characters" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
             </div>
 
+            {/* Global Demographic Info (Only for Participants & Judges) */}
+            {formData.role !== 'admin' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>College / Org *</label>
+                  <input name="college" required value={formData.college} onChange={handleChange} placeholder="e.g. Stanford / Google" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Place / City *</label>
+                  <input name="place" required value={formData.place} onChange={handleChange} placeholder="e.g. Bengaluru" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
+                </div>
+              </div>
+            )}
+
             {/* Role Selector */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>I'm joining as</label>
@@ -198,6 +212,8 @@ const Register = () => {
                 })}
               </div>
             </div>
+
+
 
             {/* Admin Code */}
             {formData.role === 'admin' && (

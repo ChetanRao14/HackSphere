@@ -18,7 +18,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['participant', 'judge', 'admin'],
     default: 'participant'
-  }
+  },
+  college: { type: String },
+  place: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

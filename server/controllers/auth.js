@@ -6,7 +6,7 @@ const ADMIN_CODE = process.env.ADMIN_CODE || 'HACKSPHERE_ADMIN_2025';
 
 const register = async (req, res) => {
   try {
-    const { name, email, password, role, adminCode } = req.body;
+    const { name, email, password, role, adminCode, college, place } = req.body;
 
     // Server-side validation (frontend 'required' can be bypassed via direct API calls)
     if (!name || !name.trim()) {
@@ -41,7 +41,9 @@ const register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: userRole
+      role: userRole,
+      college,
+      place
     });
 
     await user.save();
@@ -80,7 +82,9 @@ const login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        college: user.college,
+        place: user.place
       }
     });
   } catch (error) {
@@ -89,4 +93,23 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      college: user.college,
+      place: user.place
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { register, login, getMe };
