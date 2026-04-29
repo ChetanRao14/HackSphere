@@ -130,6 +130,8 @@ const AdminDashboard = () => {
   const [pSearch, setPSearch] = useState('');
   const [pRole, setPRole] = useState('all');
   const [pHackathonId, setPHackathonId] = useState('');
+  const [pCollege, setPCollege] = useState('');
+  const [pPlace, setPPlace] = useState('');
   const [pPage, setPPage] = useState(1);
 
   // Hackathons Pagination State
@@ -160,7 +162,7 @@ const AdminDashboard = () => {
     setError('');
     try {
       const res = await axios.get(`${API}/admin/user-directory`, {
-        params: { search: pSearch, role: pRole, hackathonId: pHackathonId, page: pPage, limit: 20 }
+        params: { search: pSearch, role: pRole, hackathonId: pHackathonId, college: pCollege, place: pPlace, page: pPage, limit: 20 }
       });
       setParticipants(res.data.users || []);
       setPPagination(res.data.pagination);
@@ -169,7 +171,7 @@ const AdminDashboard = () => {
       setError(`Failed to load user directory: ${e.response?.data?.message || e.message}`);
     }
     finally { setParticipantsLoading(false); }
-  }, [pSearch, pRole, pHackathonId, pPage]);
+  }, [pSearch, pRole, pHackathonId, pCollege, pPlace, pPage]);
 
   // Debounced search for participants
   useEffect(() => {
@@ -177,12 +179,12 @@ const AdminDashboard = () => {
       if (view === 'participants') fetchParticipants();
     }, 400);
     return () => clearTimeout(handler);
-  }, [pSearch, fetchParticipants, view]);
+  }, [pSearch, pCollege, pPlace, fetchParticipants, view]);
 
   // Reset page when filters change
   useEffect(() => {
     setPPage(1);
-  }, [pSearch, pRole, pHackathonId]);
+  }, [pSearch, pRole, pHackathonId, pCollege, pPlace]);
 
   // Refetch when filters change (except search which is debounced)
   useEffect(() => {
@@ -527,12 +529,20 @@ const AdminDashboard = () => {
             </div>
 
             {/* Filters Row */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '24px', background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px', background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+              <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Search Name</label>
                 <input value={pSearch} onChange={e => setPSearch(e.target.value)} placeholder="e.g. John Doe" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
               </div>
-              <div style={{ width: '160px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>College</label>
+                <input value={pCollege} onChange={e => setPCollege(e.target.value)} placeholder="e.g. Stanford" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Location</label>
+                <input value={pPlace} onChange={e => setPPlace(e.target.value)} placeholder="e.g. California" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
+              </div>
+              <div style={{ minWidth: '160px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Role</label>
                 <select value={pRole} onChange={e => setPRole(e.target.value)} style={inputStyle} onFocus={focusIn} onBlur={focusOut}>
                   <option value="all">All Roles</option>
@@ -541,7 +551,7 @@ const AdminDashboard = () => {
                   <option value="admin">Admins</option>
                 </select>
               </div>
-              <div style={{ flex: 1, minWidth: '200px' }}>
+              <div style={{ minWidth: '200px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Filter By Hackathon</label>
                 <select value={pHackathonId} onChange={e => setPHackathonId(e.target.value)} style={inputStyle} onFocus={focusIn} onBlur={focusOut}>
                   <option value="">All Events</option>
@@ -557,6 +567,8 @@ const AdminDashboard = () => {
                   <tr>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>NAME</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>EMAIL</th>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>COLLEGE</th>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>LOCATION</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>ROLE</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>JOINED</th>
                   </tr>
@@ -574,6 +586,8 @@ const AdminDashboard = () => {
                     <tr key={p._id} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }}>
                       <td style={{ padding: '16px 24px', fontWeight: '600', color: '#0f172a' }}>{p.name}</td>
                       <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.email}</td>
+                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.college || '—'}</td>
+                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.place || '—'}</td>
                       <td style={{ padding: '16px 24px' }}>
                         <span style={{ 
                           padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase',
@@ -586,7 +600,7 @@ const AdminDashboard = () => {
                   ))}
                   {participants.length === 0 && !participantsLoading && (
                     <tr>
-                      <td colSpan="4" style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No users found matching these filters.</td>
+                      <td colSpan="6" style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No users found matching these filters.</td>
                     </tr>
                   )}
                 </tbody>
