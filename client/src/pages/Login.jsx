@@ -52,7 +52,12 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/login`, { email, password, role });
+      const BASE_URL = import.meta.env.VITE_API_URL;
+      const res = await axios.post(`${BASE_URL}/auth/login`, {
+        email,
+        password,
+        role
+      });
       login(res.data.user, res.data.token);
       navigate(`/${res.data.user.role}`, { replace: true });
     } catch (err) {
