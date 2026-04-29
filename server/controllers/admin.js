@@ -182,7 +182,7 @@ const getStats = async (req, res) => {
 // Directory view: Get users with optional role/search filter (paginated)
 const getParticipants = async (req, res) => {
   try {
-    const { search, role, hackathonId, college, place } = req.query;
+    const { search, role, hackathonId, college, organization, place } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
@@ -196,6 +196,7 @@ const getParticipants = async (req, res) => {
 
     if (search) query.name = { $regex: search, $options: 'i' };
     if (college) query.college = { $regex: college, $options: 'i' };
+    if (organization) query.organization = { $regex: organization, $options: 'i' };
     if (place) query.place = { $regex: place, $options: 'i' };
 
     // If hackathonId is provided, restrict to users involved in that event
@@ -217,7 +218,7 @@ const getParticipants = async (req, res) => {
 
     const total = await User.countDocuments(query);
     const users = await User.find(query)
-      .select('name email role college place createdAt')
+      .select('name email role college organization place createdAt')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

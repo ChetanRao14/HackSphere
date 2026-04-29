@@ -6,7 +6,7 @@ const ADMIN_CODE = process.env.ADMIN_CODE || 'HACKSPHERE_ADMIN_2025';
 
 const register = async (req, res) => {
   try {
-    const { name, email, password, role, adminCode, college, place } = req.body;
+    const { name, email, password, role, adminCode, college, organization, place } = req.body;
 
     // Server-side validation (frontend 'required' can be bypassed via direct API calls)
     if (!name || !name.trim()) {
@@ -43,6 +43,7 @@ const register = async (req, res) => {
       password: hashedPassword,
       role: userRole,
       college,
+      organization,
       place
     });
 
@@ -84,6 +85,7 @@ const login = async (req, res) => {
         email: user.email,
         role: user.role,
         college: user.college,
+        organization: user.organization,
         place: user.place
       }
     });
@@ -104,6 +106,7 @@ const getMe = async (req, res) => {
       email: user.email,
       role: user.role,
       college: user.college,
+      organization: user.organization,
       place: user.place
     });
   } catch (error) {

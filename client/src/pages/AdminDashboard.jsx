@@ -131,6 +131,7 @@ const AdminDashboard = () => {
   const [pRole, setPRole] = useState('all');
   const [pHackathonId, setPHackathonId] = useState('');
   const [pCollege, setPCollege] = useState('');
+  const [pOrganization, setPOrganization] = useState('');
   const [pPlace, setPPlace] = useState('');
   const [pPage, setPPage] = useState(1);
 
@@ -162,7 +163,7 @@ const AdminDashboard = () => {
     setError('');
     try {
       const res = await axios.get(`${API}/admin/user-directory`, {
-        params: { search: pSearch, role: pRole, hackathonId: pHackathonId, college: pCollege, place: pPlace, page: pPage, limit: 20 }
+        params: { search: pSearch, role: pRole, hackathonId: pHackathonId, college: pCollege, organization: pOrganization, place: pPlace, page: pPage, limit: 20 }
       });
       setParticipants(res.data.users || []);
       setPPagination(res.data.pagination);
@@ -179,12 +180,12 @@ const AdminDashboard = () => {
       if (view === 'participants') fetchParticipants();
     }, 400);
     return () => clearTimeout(handler);
-  }, [pSearch, pCollege, pPlace, fetchParticipants, view]);
+  }, [pSearch, pCollege, pOrganization, pPlace, fetchParticipants, view]);
 
   // Reset page when filters change
   useEffect(() => {
     setPPage(1);
-  }, [pSearch, pRole, pHackathonId, pCollege, pPlace]);
+  }, [pSearch, pRole, pHackathonId, pCollege, pOrganization, pPlace]);
 
   // Refetch when filters change (except search which is debounced)
   useEffect(() => {
@@ -305,6 +306,11 @@ const AdminDashboard = () => {
       {/* ── GLOBAL WELCOME ── */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Welcome back, {user?.name} 👋</h1>
+        <div style={{ display: 'flex', gap: '16px', color: '#64748b', fontSize: '14px', fontWeight: '500' }}>
+          {user?.college && <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>🎓 {user.college}</span>}
+          {user?.organization && <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>🏢 {user.organization}</span>}
+          {user?.place && <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>📍 {user.place}</span>}
+        </div>
       </div>
 
       {/* ── HORIZONTAL ADMIN PANEL ── */}
@@ -539,6 +545,10 @@ const AdminDashboard = () => {
                 <input value={pCollege} onChange={e => setPCollege(e.target.value)} placeholder="e.g. Stanford" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
               </div>
               <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Organisation</label>
+                <input value={pOrganization} onChange={e => setPOrganization(e.target.value)} placeholder="e.g. Google" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
+              </div>
+              <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Location</label>
                 <input value={pPlace} onChange={e => setPPlace(e.target.value)} placeholder="e.g. California" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
               </div>
@@ -567,7 +577,7 @@ const AdminDashboard = () => {
                   <tr>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>NAME</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>EMAIL</th>
-                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>COLLEGE</th>
+                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>COLLEGE / ORG</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>LOCATION</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>ROLE</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>JOINED</th>
@@ -586,7 +596,7 @@ const AdminDashboard = () => {
                     <tr key={p._id} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.2s' }}>
                       <td style={{ padding: '16px 24px', fontWeight: '600', color: '#0f172a' }}>{p.name}</td>
                       <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.email}</td>
-                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.college || '—'}</td>
+                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.college || p.organization || '—'}</td>
                       <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.place || '—'}</td>
                       <td style={{ padding: '16px 24px' }}>
                         <span style={{ 

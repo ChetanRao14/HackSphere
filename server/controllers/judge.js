@@ -65,7 +65,7 @@ const getTeams = async (req, res) => {
       .sort({ registrationRank: 1 })   // show in registration order
       .skip(skip)
       .limit(limit)
-      .populate('createdBy', 'name email college place')
+      .populate('createdBy', 'name email college organization place')
       .populate('hackathon', 'title');
 
     const total = await Team.countDocuments(query);
@@ -102,7 +102,7 @@ const leaveHackathon = async (req, res) => {
 // Get all participants/judges for directory view
 const getParticipants = async (req, res) => {
   try {
-    const { college, place, search, role } = req.query;
+    const { college, organization, place, search, role } = req.query;
     const User = require('../models/User');
     let query = {};
     
@@ -113,11 +113,12 @@ const getParticipants = async (req, res) => {
     }
 
     if (college) query.college = { $regex: college, $options: 'i' };
+    if (organization) query.organization = { $regex: organization, $options: 'i' };
     if (place)    query.place    = { $regex: place,    $options: 'i' };
     if (search)  query.name    = { $regex: search,  $options: 'i' };
 
     const participants = await User.find(query)
-      .select('name email role college place createdAt')
+      .select('name email role college organization place createdAt')
       .sort({ createdAt: -1 });
     res.json(participants);
   } catch (err) {

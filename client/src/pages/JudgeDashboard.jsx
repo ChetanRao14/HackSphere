@@ -24,7 +24,12 @@ const AbstractModal = ({ team, onClose }) => (
               <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
                 <div>
                   <p style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', margin: '0 0 2px' }}>Team Lead</p>
-                  <p style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', margin: 0 }}>{team.createdBy.name}</p>
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', margin: '0 0 2px' }}>{team.createdBy.name}</p>
+                  <div style={{ display: 'flex', gap: '10px', fontSize: '11px', color: '#64748b' }}>
+                    {team.createdBy.college && <span>🎓 {team.createdBy.college}</span>}
+                    {team.createdBy.organization && <span>🏢 {team.createdBy.organization}</span>}
+                    {team.createdBy.place && <span>📍 {team.createdBy.place}</span>}
+                  </div>
                 </div>
               </div>
             )}
@@ -161,6 +166,7 @@ export default function JudgeDashboard() {
   const [selectedHackathon, setSelectedHackathon] = useState(null);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hPagination, setHPagination] = useState(null);
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [joiningId, setJoiningId] = useState(null);
   const [search, setSearch] = useState('');
@@ -178,7 +184,10 @@ export default function JudgeDashboard() {
   const fetchHackathons = () => {
     setLoading(true);
     axios.get(`${API}/judge/hackathons`)
-      .then(r => setHackathons(r.data))
+      .then(r => {
+        setHackathons(r.data.hackathons || []);
+        setHPagination(r.data.pagination);
+      })
       .catch(e => console.error(e))
       .finally(() => setLoading(false));
   };
@@ -281,6 +290,11 @@ export default function JudgeDashboard() {
         <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '12px 0 6px', letterSpacing: '-0.5px' }}>
           Welcome, {user?.name || 'Judge'}!
         </h1>
+        <div style={{ display: 'flex', gap: '16px', color: '#64748b', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+          {user?.college && <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>🎓 {user.college}</span>}
+          {user?.organization && <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>🏢 {user.organization}</span>}
+          {user?.place && <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>📍 {user.place}</span>}
+        </div>
         <p style={{ color: '#64748b', margin: 0, fontSize: '15px' }}>
           {selectedHackathon ? `Judging: ${selectedHackathon.title}` : 'Manage your judging events and review abstracts.'}
         </p>

@@ -22,11 +22,30 @@ const ROLES = [
     shadow: 'rgba(8,145,178,0.2)',
     border: '#a5f3fc',
     bg: '#ecfeff',
+  },
+  {
+    value: 'admin',
+    emoji: '👑',
+    label: 'Admin',
+    desc: 'Full platform management',
+    color: '#d97706',
+    shadow: 'rgba(217,119,6,0.2)',
+    border: '#fde68a',
+    bg: '#fffbeb',
   }
 ];
 
 const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'participant' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    email: '', 
+    password: '', 
+    role: 'participant',
+    college: '',
+    organization: '',
+    place: '',
+    adminCode: ''
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -144,6 +163,33 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Role Selector */}
+            <div style={{ marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>I'm joining as</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                {ROLES.map(role => {
+                  const sel = formData.role === role.value;
+                  return (
+                    <button key={role.value} type="button"
+                      onClick={() => setFormData({ ...formData, role: role.value })}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        gap: '6px', padding: '12px 6px',
+                        borderRadius: '12px', cursor: 'pointer',
+                        border: `1.5px solid ${sel ? role.border : '#e2e8f0'}`,
+                        background: sel ? role.bg : '#f8fafc',
+                        transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
+                        boxShadow: sel ? `0 0 0 3px ${role.shadow}` : 'none',
+                      }}
+                    >
+                      <span style={{ fontSize: '20px', lineHeight: 1 }}>{role.emoji}</span>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: sel ? role.color : '#475569' }}>{role.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Name */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Full Name *</label>
@@ -160,33 +206,33 @@ const Register = () => {
               <input name="password" type="password" required value={formData.password} onChange={handleChange} placeholder="Minimum 6 characters" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
             </div>
 
-            {/* Role Selector */}
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>I'm joining as</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {ROLES.map(role => {
-                  const sel = formData.role === role.value;
-                  return (
-                    <button key={role.value} type="button"
-                      onClick={() => setFormData({ ...formData, role: role.value })}
-                      style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        gap: '6px', padding: '16px 8px',
-                        borderRadius: '14px', cursor: 'pointer',
-                        border: `1.5px solid ${sel ? role.border : '#e2e8f0'}`,
-                        background: sel ? role.bg : '#f8fafc',
-                        transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
-                        boxShadow: sel ? `0 0 0 3px ${role.shadow}` : 'none',
-                      }}
-                    >
-                      <span style={{ fontSize: '22px', lineHeight: 1 }}>{role.emoji}</span>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: sel ? role.color : '#475569' }}>{role.label}</span>
-                      <span style={{ fontSize: '10px', color: sel ? role.color : '#94a3b8', fontWeight: '600', textAlign: 'center', lineHeight: 1.3, padding: '0 4px' }}>{role.desc}</span>
-                    </button>
-                  );
-                })}
+            {formData.role === 'participant' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>College / Univ *</label>
+                  <input name="college" type="text" required={formData.role === 'participant'} value={formData.college || ''} onChange={handleChange} placeholder="e.g. Stanford" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Location *</label>
+                  <input name="place" type="text" required={formData.role === 'participant'} value={formData.place || ''} onChange={handleChange} placeholder="e.g. California" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
+                </div>
               </div>
-            </div>
+            )}
+
+            {formData.role === 'judge' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Organisation *</label>
+                  <input name="organization" type="text" required={formData.role === 'judge'} value={formData.organization || ''} onChange={handleChange} placeholder="e.g. Google" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Location *</label>
+                  <input name="place" type="text" required={formData.role === 'judge'} value={formData.place || ''} onChange={handleChange} placeholder="e.g. New York" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
+                </div>
+              </div>
+            )}
+
+
 
 
 

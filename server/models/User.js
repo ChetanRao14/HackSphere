@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema({
     index: true
   },
   college: { type: String },
+  organization: { type: String },
   place: { type: String }
 }, { timestamps: true });
 
