@@ -286,10 +286,6 @@ export default function JudgeDashboard() {
         <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '12px 0 6px', letterSpacing: '-0.5px' }}>
           Welcome, {user?.name || 'Judge'}!
         </h1>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: '#64748b', fontSize: '15px', marginBottom: '8px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🏛️ {user?.college || 'No Org'}</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📍 {user?.place || 'No Place'}</span>
-        </div>
         <p style={{ color: '#64748b', margin: 0, fontSize: '15px' }}>
           {selectedHackathon ? `Judging: ${selectedHackathon.title}` : 'Manage your judging events and review abstracts.'}
         </p>

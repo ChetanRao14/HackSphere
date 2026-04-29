@@ -22,22 +22,11 @@ const ROLES = [
     shadow: 'rgba(8,145,178,0.2)',
     border: '#a5f3fc',
     bg: '#ecfeff',
-  },
-  {
-    value: 'admin',
-    emoji: '👑',
-    label: 'Admin',
-    desc: 'Manage global hackathons',
-    color: '#d97706',
-    shadow: 'rgba(217,119,6,0.2)',
-    border: '#fcd34d',
-    bg: '#fffbeb',
-    requiresCode: true,
-  },
+  }
 ];
 
 const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'participant', adminCode: '', college: '', place: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'participant' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -171,29 +160,15 @@ const Register = () => {
               <input name="password" type="password" required value={formData.password} onChange={handleChange} placeholder="Minimum 6 characters" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
             </div>
 
-            {/* Global Demographic Info (Only for Participants & Judges) */}
-            {formData.role !== 'admin' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>College / Org *</label>
-                  <input name="college" required value={formData.college} onChange={handleChange} placeholder="e.g. Stanford / Google" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Place / City *</label>
-                  <input name="place" required value={formData.place} onChange={handleChange} placeholder="e.g. Bengaluru" style={inputStyle} onFocus={focusIn()} onBlur={focusOut} />
-                </div>
-              </div>
-            )}
-
             {/* Role Selector */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>I'm joining as</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {ROLES.map(role => {
                   const sel = formData.role === role.value;
                   return (
                     <button key={role.value} type="button"
-                      onClick={() => setFormData({ ...formData, role: role.value, adminCode: '' })}
+                      onClick={() => setFormData({ ...formData, role: role.value })}
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                         gap: '6px', padding: '16px 8px',

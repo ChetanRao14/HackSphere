@@ -82,8 +82,9 @@ const AdminDashboard = () => {
   const [pSearch, setPSearch] = useState('');
   const [pRole, setPRole] = useState('all');
   const [pHackathonId, setPHackathonId] = useState('');
-  const [pCollege, setPCollege] = useState('');
-  const [pPlace, setPPlace] = useState('');
+  const [pSearch, setPSearch] = useState('');
+  const [pRole, setPRole] = useState('all');
+  const [pHackathonId, setPHackathonId] = useState('');
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -109,7 +110,7 @@ const AdminDashboard = () => {
       
       console.log('Fetching users from:', `${API}/admin/user-directory`);
       const res = await axios.get(`${API}/admin/user-directory`, {
-        params: { search: pSearch, role: pRole, hackathonId: pHackathonId, college: pCollege, place: pPlace }
+        params: { search: pSearch, role: pRole, hackathonId: pHackathonId }
       });
       console.log('User Directory response:', res.data);
       const data = Array.isArray(res.data) ? res.data : [];
@@ -123,7 +124,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (view === 'participants') fetchParticipants();
-  }, [view, pSearch, pRole, pHackathonId, pCollege, pPlace]);
+  }, [view, pSearch, pRole, pHackathonId]);
 
 
   const openNew = () => { setForm(defaultForm); setEditTarget(null); setError(''); setView('new'); };
@@ -230,10 +231,6 @@ const AdminDashboard = () => {
       {/* ── GLOBAL WELCOME ── */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.5px' }}>Welcome back, {user?.name} 👋</h1>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: '#64748b', fontSize: '15px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>🏛️ {user?.college || 'No Org'}</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>📍 {user?.place || 'No Place'}</span>
-        </div>
       </div>
 
       {/* ── HORIZONTAL ADMIN PANEL ── */}
@@ -456,14 +453,6 @@ const AdminDashboard = () => {
                   {hackathons.map(h => <option key={h._id} value={h._id}>{h.title}</option>)}
                 </select>
               </div>
-              <div style={{ flex: 1, minWidth: '150px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>College</label>
-                <input value={pCollege} onChange={e => setPCollege(e.target.value)} placeholder="e.g. Stanford" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
-              </div>
-              <div style={{ flex: 1, minWidth: '150px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Place</label>
-                <input value={pPlace} onChange={e => setPPlace(e.target.value)} placeholder="e.g. California" style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
-              </div>
             </div>
 
             {/* Results Table */}
@@ -474,8 +463,6 @@ const AdminDashboard = () => {
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>NAME</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>EMAIL</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>ROLE</th>
-                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>COLLEGE</th>
-                    <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>PLACE</th>
                     <th style={{ padding: '16px 24px', fontWeight: '700', color: '#64748b' }}>JOINED</th>
                   </tr>
                 </thead>
@@ -499,14 +486,12 @@ const AdminDashboard = () => {
                           color: p.role === 'admin' ? '#dc2626' : p.role === 'judge' ? '#0891b2' : '#16a34a'
                         }}>{p.role}</span>
                       </td>
-                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.college || '-'}</td>
-                      <td style={{ padding: '16px 24px', color: '#64748b' }}>{p.place || '-'}</td>
                       <td style={{ padding: '16px 24px', color: '#94a3b8' }}>{new Date(p.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
                   {participants.length === 0 && !participantsLoading && (
                     <tr>
-                      <td colSpan="6" style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No users found matching these filters.</td>
+                      <td colSpan="4" style={{ padding: '48px', textAlign: 'center', color: '#94a3b8' }}>No users found matching these filters.</td>
                     </tr>
                   )}
                 </tbody>
